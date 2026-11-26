@@ -73,7 +73,12 @@ export function itemInfo(item: MediaItem): FocusedItem {
     subtitle: code ? tr("mediaCodeTitle", code, label.title) : null,
     facts: facts(label.year, formatRuntime(runtimeMinutes(item)), left),
     contentRating: item.title?.contentRating ?? null,
-    rating: item.title?.rating ?? null,
+    // A movie's score is its title's; an episode's is its own, never its
+    // show's.
+    rating:
+      item.title?.kind === "movie"
+        ? item.title.rating
+        : (item.episode?.rating ?? null),
     overview: item.episode?.overview ?? item.title?.overview ?? null,
     backdrop: backdropOf(item, item.title),
   }
@@ -183,7 +188,8 @@ export function seasonInfo(title: TitleSummary, season: Season): FocusedItem {
     subtitle: null,
     facts: [plural("mediaEpisodeCount", season.itemCount)],
     contentRating: title.contentRating,
-    rating: title.rating,
+    // The season's own score, never its show's.
+    rating: season.rating,
     overview: season.overview ?? title.overview,
     backdrop: present(art(title.images.backdrop, "large")),
   }

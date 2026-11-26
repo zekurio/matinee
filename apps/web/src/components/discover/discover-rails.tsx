@@ -10,7 +10,7 @@ import {
   useQueryClient,
 } from "@tanstack/solid-query"
 import { Link, useRouteContext } from "@tanstack/solid-router"
-import { ChevronRight, CloudOff, Compass, RotateCw } from "lucide"
+import { ChevronRight, CloudOff, Compass, RefreshCw } from "lucide"
 import { createMemo, For, Match, Repeat, Show, Switch } from "solid-js"
 
 import {
@@ -319,7 +319,7 @@ export function RailsNote(props: {
       <Show when={props.retry}>
         {(retry) => (
           <Button variant="outline" size="sm" onClick={() => retry()()}>
-            <Icon icon={RotateCw} />
+            <Icon icon={RefreshCw} />
             {tr("discover.retry")}
           </Button>
         )}
@@ -359,7 +359,7 @@ function Failed(props: { onRetry: () => void }) {
       description={tr("discover.failedHint")}
     >
       <Button variant="outline" onClick={() => props.onRetry()}>
-        <Icon icon={RotateCw} />
+        <Icon icon={RefreshCw} />
         {tr("discover.retry")}
       </Button>
     </DiscoverEmpty>

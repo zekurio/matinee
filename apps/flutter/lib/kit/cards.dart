@@ -201,6 +201,7 @@ class CardText extends StatelessWidget {
     required this.primary,
     this.secondary,
     this.secondaryIcon,
+    this.score,
     this.untitled = false,
   });
 
@@ -209,6 +210,10 @@ class CardText extends StatelessWidget {
 
   /// A [Lucide] icon before [secondary], as the score's star.
   final String? secondaryIcon;
+
+  /// A score after [secondary], by a star in the warning color, as an
+  /// episode's. It stays whole while [secondary] gives way.
+  final String? score;
 
   /// Nothing named it, so the name is a stand-in, in the regular weight.
   final bool untitled;
@@ -227,6 +232,32 @@ class CardText extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
     final detail = secondary;
+    final score = this.score;
+    final style = KitText.px13.style(color: colors.mutedForeground);
+    final words = detail == null
+        ? null
+        : Text.rich(
+            TextSpan(
+              children: [
+                if (secondaryIcon case final icon?)
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 4),
+                      child: KitIcon(
+                        icon,
+                        size: 12,
+                        color: colors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                TextSpan(text: detail),
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: style,
+          );
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Column(
@@ -242,28 +273,22 @@ class CardText extends StatelessWidget {
               weight: untitled ? FontWeight.w400 : FontWeight.w500,
             ),
           ),
-          if (detail != null)
-            Text.rich(
-              TextSpan(
-                children: [
-                  if (secondaryIcon case final icon?)
-                    WidgetSpan(
-                      alignment: PlaceholderAlignment.middle,
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.only(end: 4),
-                        child: KitIcon(
-                          icon,
-                          size: 12,
-                          color: colors.mutedForeground,
-                        ),
-                      ),
-                    ),
-                  TextSpan(text: detail),
-                ],
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: KitText.px13.style(color: colors.mutedForeground),
+          if (score == null)
+            ?words
+          else
+            Row(
+              spacing: 8,
+              children: [
+                if (words != null) Flexible(child: words),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 4,
+                  children: [
+                    KitIcon(Lucide.star, size: 12, color: colors.warning),
+                    Text(score, maxLines: 1, style: style),
+                  ],
+                ),
+              ],
             ),
         ],
       ),
@@ -431,6 +456,8 @@ class WideCard extends StatelessWidget {
     super.key,
     required this.name,
     this.detail,
+    this.score,
+    this.scoreLabel,
     this.toneKey,
     this.untitled = false,
     this.art,
@@ -445,6 +472,11 @@ class WideCard extends StatelessWidget {
 
   final String name;
   final String? detail;
+
+  /// A score after [detail], by its star, as on an episode's card, and
+  /// what a screen reader says for the two, as "Score 7.8".
+  final String? score;
+  final String? scoreLabel;
   final String? toneKey;
   final bool untitled;
   final Widget? art;
@@ -471,7 +503,7 @@ class WideCard extends StatelessWidget {
       longPressLabel: longPressLabel,
       shape: CardMetrics.radius,
       showFocusRing: false,
-      label: [name, ?detail].join(', '),
+      label: [name, ?detail, ?scoreLabel].join(', '),
       builder: (context, state) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -514,6 +546,7 @@ class WideCard extends StatelessWidget {
             child: CardText(
               primary: name,
               secondary: detail,
+              score: score,
               untitled: untitled,
             ),
           ),

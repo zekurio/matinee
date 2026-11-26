@@ -46,6 +46,7 @@ export type EpisodeDetails = {
   overview: string | null
   airDate: string | null
   runtimeMinutes: number | null
+  rating: number | null
   still: string | null
 }
 
@@ -53,6 +54,7 @@ export type SeasonDetails = {
   number: number
   overview: string | null
   poster: string | null
+  rating: number | null
 }
 
 export type CreditDetails = {

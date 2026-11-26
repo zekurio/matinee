@@ -32,12 +32,13 @@ import { useSeasonWatched, WatchedButton } from "@/components/watched-menu"
 import { tr } from "@/i18n"
 import { buttonVariants } from "@/kit/button"
 import { Skeleton } from "@/kit/skeleton"
-import { art, type ImageSource, seasonName } from "@/lib/media"
+import { art, type ImageSource, present, seasonName } from "@/lib/media"
 import { errorMessage, orpc } from "@/lib/rpc"
 
 import { HeaderOverview } from "./header-overview"
 import { railStart } from "./rail-start"
 import { RestOfSeasonCard } from "./rest-of-season"
+import { Score } from "./score"
 import { useShowGaps } from "./show-gaps"
 import { PlayButton } from "./title-header"
 import { TitleSkeleton } from "./title-page"
@@ -155,7 +156,7 @@ function SeasonMissing(props: { title: Title | undefined; error: unknown }) {
             <Link
               to="/"
               class={buttonVariants({
-                variant: "secondary",
+                variant: "outline",
                 className: "mt-6",
               })}
             >
@@ -168,7 +169,7 @@ function SeasonMissing(props: { title: Title | undefined; error: unknown }) {
           <Link
             to="/titles/$titleId"
             params={{ titleId: show().id }}
-            class={buttonVariants({ variant: "secondary", className: "mt-6" })}
+            class={buttonVariants({ variant: "outline", className: "mt-6" })}
           >
             {tr("title.season.all")}
           </Link>
@@ -308,6 +309,7 @@ function SeasonHeader(props: {
                     {props.title.contentRating}
                   </span>
                 </Show>
+                <Score score={props.season.rating} />
               </div>
             </div>
 
@@ -401,8 +403,8 @@ function HeaderBackdrop(props: {
 
 /**
  * The poster beside a header's details, always 2:3. It sets the header's
- * height; the details fit beside it. Shows the name until the poster
- * loads, or when there's none.
+ * height; the details fit beside it. Shows the name when there's no
+ * poster or it fails to load.
  */
 function HeaderPoster(props: {
   name: string
@@ -416,21 +418,19 @@ function HeaderPoster(props: {
         tone(props.toneKey),
       ]}
     >
-      <span
-        aria-hidden="true"
-        class="text-foreground/70 line-clamp-5 text-xs font-medium text-balance sm:text-sm"
-      >
-        {props.name}
-      </span>
-      <Show when={props.poster}>
-        {(poster) => (
-          <Picture
-            sizes="(min-width: 1024px) 180px, (min-width: 640px) 144px, 96px"
-            sources={[poster()]}
-            eager
-          />
-        )}
-      </Show>
+      <Picture
+        sizes="(min-width: 1024px) 180px, (min-width: 640px) 144px, 96px"
+        sources={present(props.poster)}
+        eager
+        fallback={
+          <span
+            aria-hidden="true"
+            class="text-foreground/70 line-clamp-5 text-xs font-medium text-balance sm:text-sm"
+          >
+            {props.name}
+          </span>
+        }
+      />
     </div>
   )
 }

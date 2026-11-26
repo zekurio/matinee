@@ -223,6 +223,8 @@ class _EpisodeHeading extends StatelessWidget {
           HeadingFacts(
             facts: episodeFacts(item, l),
             contentRating: title?.contentRating,
+            // The episode's own score, never its show's.
+            rating: item.episode?.rating,
           ),
           if (item.probe != null) ...[
             const SizedBox(height: 12),

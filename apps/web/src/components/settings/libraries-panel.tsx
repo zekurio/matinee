@@ -70,9 +70,10 @@ export function LibrariesPanel() {
   // The form browses the server's folders to pick from.
   const mayAdd = () =>
     can(context().user, "library.create") && can(context().user, "folder.read")
-  const addButton = () => (
+  // Outline beside the section's title, filled as an empty list's one action.
+  const addButton = (variant: "default" | "outline") => (
     <Show when={mayAdd()}>
-      <Button onClick={() => store.edit()}>
+      <Button variant={variant} onClick={() => store.edit()}>
         <Icon icon={Plus} />
         {tr("libraries.add")}
       </Button>
@@ -84,7 +85,7 @@ export function LibrariesPanel() {
       <SettingsSubsection
         id="libraries"
         title={tr("libraries.title")}
-        action={list().length && mayAdd() ? addButton() : undefined}
+        action={list().length && mayAdd() ? addButton("outline") : undefined}
       >
         <Switch>
           <Match when={libraries.isPending}>
@@ -114,7 +115,7 @@ export function LibrariesPanel() {
                   {tr("libraries.empty.description")}
                 </EmptyDescription>
               </EmptyHeader>
-              <EmptyContent>{addButton()}</EmptyContent>
+              <EmptyContent>{addButton("default")}</EmptyContent>
             </Empty>
           </Match>
           <Match when={true}>

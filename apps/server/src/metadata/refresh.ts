@@ -1,4 +1,8 @@
-import type { MetadataProviderId, TitleImageSlot } from "@matinee/contracts"
+import type {
+  MetadataProviderId,
+  TitleImageSlot,
+  TitleKind,
+} from "@matinee/contracts"
 import {
   credit,
   episode,
@@ -12,6 +16,7 @@ import {
 } from "@matinee/db"
 import { eq } from "drizzle-orm"
 
+import { lookupProvider, scoresProvider } from "../catalog/cache"
 import { db } from "../db"
 import { ShownError } from "../errors"
 import { defineQueue } from "../jobs/queue"
@@ -24,6 +29,7 @@ import { libraryChanged } from "../requests/arrival"
 import { type Choices, episodeKey, readChoices } from "./choices"
 import { bestMatch } from "./match"
 import { sources } from "./sources"
+import type { Scores } from "./tmdb/details"
 import {
   type Lookup,
   type MetadataSource,
@@ -51,6 +57,93 @@ function lookupFor(row: TitleRow, lib: LibraryRow): Lookup {
     kind: row.kind,
     language: lib.metadataLanguage,
   }
+}
+
+// TheTVDB and TMDB number some shows, anime especially, differently, so an
+// episode must air within this many days of TMDB's to take its score.
+const MAX_AIR_DATE_DAYS = 2
+
+/** Whole days between two `YYYY-MM-DD` dates, or null without both. */
+function daysApart(a: string | null, b: string | null): number | null {
+  if (!a || !b) return null
+  const days = Math.abs(Date.parse(a) - Date.parse(b)) / DAY
+  return Number.isFinite(days) ? days : null
+}
+
+/** The lowest episode number each season has, by number. */
+function lowestEpisodes(details: TitleDetails): Map<number, number> {
+  const lowest = new Map<number, number>()
+  for (const episode of details.episodes) {
+    const number = lowest.get(episode.season)
+    if (number === undefined || episode.episode < number) {
+      lowest.set(episode.season, episode.episode)
+    }
+  }
+  return lowest
+}
+
+/**
+ * Fills the scores a provider left empty from TMDB's, as Jellyfin does. A
+ * season takes its score only when its first episode matched, since TMDB
+ * may number that season's episodes another way.
+ */
+function fillScores(details: TitleDetails, scores: Scores): TitleDetails {
+  const byNumber = new Map(
+    scores.episodes.map((episode) => [
+      episodeKey(episode.season, episode.episode),
+      episode,
+    ]),
+  )
+  const matched = new Set<string>()
+  const episodes = details.episodes.map((episode) => {
+    if (episode.rating !== null) return episode
+    const found = byNumber.get(episodeKey(episode.season, episode.episode))
+    if (!found || found.rating === null) return episode
+    const apart = daysApart(episode.airDate, found.airDate)
+    if (apart === null || apart > MAX_AIR_DATE_DAYS) return episode
+    matched.add(episodeKey(episode.season, episode.episode))
+    return { ...episode, rating: found.rating }
+  })
+  const ratings = new Map(
+    scores.seasons.map((season) => [season.number, season.rating]),
+  )
+  const lowest = lowestEpisodes(details)
+  return {
+    ...details,
+    rating: details.rating ?? scores.rating,
+    seasons: details.seasons.map((season) => {
+      if (season.rating !== null) return season
+      const first = lowest.get(season.number)
+      if (first === undefined) return season
+      if (!matched.has(episodeKey(season.number, first))) return season
+      const rating = ratings.get(season.number)
+      return rating === undefined || rating === null
+        ? season
+        : { ...season, rating }
+    }),
+    episodes,
+  }
+}
+
+/**
+ * TMDB's scores for a title whose library uses another provider, by its
+ * TMDB id: the one the provider gave, one in the folder name, or a lookup
+ * by the ids both know.
+ */
+async function tmdbScores(
+  kind: TitleKind,
+  details: TitleDetails,
+  known: ExternalIds,
+): Promise<Scores | null> {
+  const ids = { ...known, ...details.externalIds }
+  const id =
+    details.externalIds.tmdb ??
+    known.tmdb ??
+    (Object.keys(ids).length > 0
+      ? (await lookupProvider({ provider: "tmdb", kind }, "en-US", ids)).value
+      : null)
+  if (!id) return null
+  return (await scoresProvider(kind, id)).value
 }
 
 function needsRefresh(
@@ -230,6 +323,7 @@ async function save(
           titleId: row.id,
           number: s.number,
           overview: s.overview,
+          rating: s.rating,
           posterId: chosen
             ? (kept.seasons.get(s.number) ?? null)
             : id(s.poster),
@@ -257,6 +351,7 @@ async function save(
           overview: e.overview,
           airDate: e.airDate,
           runtimeMinutes: e.runtimeMinutes,
+          rating: e.rating,
           stillId: choice ? choice.id : id(e.still),
           stillChosen: choice !== undefined,
         }
@@ -367,7 +462,18 @@ async function refreshTitle(
     return
   }
   const details = await source.details(id, lookup)
-  await save(row, source.id, details, local.ids)
+  let filled = details
+  // TheTVDB has no scores of its own, so TMDB fills the empty ones. Its
+  // failure leaves the title without them, never fails the refresh.
+  if (source.id !== "tmdb" && sources.tmdb.configured()) {
+    try {
+      const scores = await tmdbScores(row.kind, details, known)
+      if (scores) filled = fillScores(details, scores)
+    } catch (cause) {
+      log.debug(`Couldn't read TMDB scores for ${row.path}`, cause)
+    }
+  }
+  await save(row, source.id, filled, local.ids)
   // Files that replaced others take back what users had on those.
   await reattachWatchState(eq(mediaItem.titleId, row.id))
   libraryChanged(row.libraryId)

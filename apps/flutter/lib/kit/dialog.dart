@@ -255,7 +255,7 @@ class ConfirmDialog extends StatelessWidget {
     centerHeader: true,
     actions: [
       MatineeButton(
-        look: ButtonLook.outline,
+        look: ButtonLook.ghost,
         autofocus: true,
         onPressed: onCancel,
         child: Text(cancelLabel),

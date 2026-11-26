@@ -1,5 +1,5 @@
 import type { CatalogRef } from "@matinee/contracts"
-import { RotateCw } from "lucide"
+import { RefreshCw } from "lucide"
 import { createEffect, Repeat } from "solid-js"
 
 import { refKey } from "@/components/catalog/catalog-data"
@@ -78,7 +78,7 @@ export function Retry(props: { message: string; onRetry: () => void }) {
     <div class="text-muted-foreground mt-8 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed p-6 text-sm">
       {props.message}
       <Button variant="outline" size="sm" onClick={() => props.onRetry()}>
-        <Icon icon={RotateCw} />
+        <Icon icon={RefreshCw} />
         {tr("discover.retry")}
       </Button>
     </div>

@@ -142,6 +142,24 @@ familiar. ui-sdk supplies the behavior, the classes live in each file, and
 the theme tokens come from `globals.css` in `packages/ui`. `/kit` shows
 every component on one page.
 
+A button's variant follows its role, so the same kind of action looks
+the same on every screen:
+
+- `default`, filled: the one main action of a dialog, a form, or an
+  empty state, such as Save, Create, or an empty list's Add.
+- `outline`: an action beside a section's title, such as New group or
+  Add library once the list has rows, and a way back from a failure:
+  Try again, Clear filters, Back home.
+- `ghost`: dismissing beside a main action: Cancel, Back, Skip, Reset.
+  `DialogFooter`'s and `AlertDialogCancel`'s cancel buttons are ghost
+  already.
+- `destructive`: confirming something that deletes or revokes.
+- `secondary`: actions over art or on a page's hero, such as a profile's
+  Edit and Share.
+
+Try again after a failed load has `RefreshCw`; retrying a request or a
+job has `RotateCw`.
+
 ## Subtitles
 
 The player tells the server it can render WebVTT, PGS, and ASS. ASS/SSA

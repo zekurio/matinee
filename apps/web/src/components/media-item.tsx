@@ -31,6 +31,7 @@ import {
   useSeasonFavorite,
   useTitleFavorite,
 } from "@/components/favorite-button"
+import { Score } from "@/components/title/score"
 import { seasonParams } from "@/components/title/seasons"
 import {
   useItemWatched,
@@ -47,6 +48,7 @@ import {
   type ImageSource,
   itemLabel,
   landscapeSources,
+  present,
   progressRatio,
   seasonName,
   timeLeft,
@@ -81,8 +83,8 @@ export function WatchedBadge(props: { class?: string }) {
 
 /**
  * The 16:9 slot for a file or title: the best image that loads over its
- * tone, with how far the person is along the bottom. `children` go over
- * the picture.
+ * tone, or a film icon when none does, with how far the person is along
+ * the bottom. `children` go over the picture.
  */
 export function Thumb(
   props: ParentProps<{
@@ -109,8 +111,10 @@ export function Thumb(
         props.class,
       )}
     >
-      <Icon icon={Film} class="text-muted-foreground/40 size-5" />
-      <Picture sources={props.sources} />
+      <Picture
+        sources={props.sources}
+        fallback={<Icon icon={Film} class="text-muted-foreground/40 size-5" />}
+      />
       {/* What a pointer over the card washes over its art, as the Flutter
           cards do. A still that only shows doesn't answer the pointer. */}
       <Show when={hover()}>
@@ -447,8 +451,8 @@ function ShowEpisodeText(props: { item: MediaItem }) {
 }
 
 /**
- * A 2:3 poster, with the name on the title's tone until it or its
- * placeholder shows. `children` sit on top, like a badge.
+ * A 2:3 poster over the title's tone, or the name on it when there's no
+ * poster or it fails to load. `children` sit on top, like a badge.
  */
 export function PosterArt(
   props: ParentProps<{
@@ -464,17 +468,17 @@ export function PosterArt(
         tone(props.toneKey),
       )}
     >
-      {/* The poster, or its placeholder while it loads, covers this. It
-          stays when there's no poster or it fails to load. */}
-      <span
-        aria-hidden="true"
-        class="text-foreground/70 line-clamp-4 text-sm leading-5 font-medium text-balance"
-      >
-        {props.name}
-      </span>
-      <Show when={props.poster}>
-        {(poster) => <Picture sources={[poster()]} />}
-      </Show>
+      <Picture
+        sources={present(props.poster)}
+        fallback={
+          <span
+            aria-hidden="true"
+            class="text-foreground/70 line-clamp-4 text-sm leading-5 font-medium text-balance"
+          >
+            {props.name}
+          </span>
+        }
+      />
       <span
         aria-hidden="true"
         class="bg-foreground pointer-events-none absolute inset-0 opacity-0 transition-opacity group-hover/card:opacity-[0.06] group-active/card:opacity-[0.1] motion-reduce:transition-none"
@@ -759,9 +763,10 @@ function CardProgress(props: { progress: number | null }) {
 
 /**
  * An episode in its season's row: the still, the episode's name, then
- * "Episode 4 · 24m" or the time left. The still and the name open the
- * episode's page, the round button on the still plays it, and the icons in
- * its corner mark it watched or a favorite, with its "⋯" menu.
+ * "Episode 4 · 24m" or the time left, and its score. The still and the
+ * name open the episode's page, the round button on the still plays it,
+ * and the icons in its corner mark it watched or a favorite, with its "⋯"
+ * menu.
  */
 export function SeasonEpisodeCard(props: { item: MediaItem }) {
   const label = () => itemLabel(props.item)
@@ -821,7 +826,10 @@ export function SeasonEpisodeCard(props: { item: MediaItem }) {
   )
 }
 
-/** The episode's name, then "Episode 4 · 24m" or the time left. */
+/**
+ * The episode's name, then "Episode 4 · 24m" or the time left, and its
+ * score.
+ */
 function EpisodeText(props: { item: MediaItem }) {
   const label = () => itemLabel(props.item)
   const detail = () => {
@@ -859,12 +867,29 @@ function EpisodeText(props: { item: MediaItem }) {
           {label().title}
         </ItemLink>
       </span>
-      <Show when={detail()}>
-        <span class="text-muted-foreground text-13px block truncate leading-5 tabular-nums">
-          {detail()}
-        </span>
-      </Show>
+      <EpisodeDetail
+        detail={detail()}
+        score={props.item.episode?.rating ?? null}
+      />
     </>
+  )
+}
+
+/**
+ * The muted line under an episode's name on a card: what it says, like
+ * "Episode 4 · 24m", then the episode's score by its star, which stays
+ * whole while the words give way.
+ */
+export function EpisodeDetail(props: { detail: string; score: number | null }) {
+  return (
+    <Show when={props.detail || props.score !== null}>
+      <span class="text-muted-foreground text-13px flex min-w-0 items-center gap-2 leading-5 tabular-nums">
+        <Show when={props.detail}>
+          <span class="truncate">{props.detail}</span>
+        </Show>
+        <Score score={props.score} small class="shrink-0" />
+      </span>
+    </Show>
   )
 }
 

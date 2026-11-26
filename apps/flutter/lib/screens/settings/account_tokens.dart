@@ -432,7 +432,7 @@ class _TokenDialogState extends ConsumerState<_TokenDialog> {
             : l.accountApiTokensEditDescription,
         actions: [
           MatineeButton(
-            look: ButtonLook.outline,
+            look: ButtonLook.ghost,
             onPressed: _saving ? null : () => Navigator.of(context).pop(),
             child: Text(l.commonCancel),
           ),

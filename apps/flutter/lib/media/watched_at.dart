@@ -83,7 +83,7 @@ Future<DateTime?> _pickDay(BuildContext context) {
         title: l.mediaWatchedDateTitle,
         actions: [
           MatineeButton(
-            look: ButtonLook.outline,
+            look: ButtonLook.ghost,
             onPressed: () => Navigator.of(dialog).pop(),
             child: Text(l.commonCancel),
           ),

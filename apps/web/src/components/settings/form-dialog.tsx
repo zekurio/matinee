@@ -29,8 +29,10 @@ const WIDTHS = {
   /**
    * Three columns of rows. They sit as two until the screen is wide, since
    * a row's name, hint, and control don't fit side by side in a third.
+   * While the form shows only two, it is as wide as `lg`.
    */
-  "2xl": "sm:max-w-7xl 2xl:max-w-[96rem]",
+  "2xl":
+    "sm:max-w-5xl sm:has-[[data-columns=3]]:max-w-7xl 2xl:has-[[data-columns=3]]:max-w-[96rem]",
 } satisfies Record<string, string>
 
 export function FormDialogContent(props: {
@@ -114,6 +116,7 @@ export function FormDialogFooter(props: {
 export function FormColumns(props: { count?: 2 | 3; children: JSX.Element }) {
   return (
     <div
+      data-columns={props.count ?? 2}
       class={[
         "grid items-start gap-x-8 gap-y-6",
         (props.count ?? 2) === 2

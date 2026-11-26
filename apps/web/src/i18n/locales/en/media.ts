@@ -51,7 +51,6 @@ export default defineMessages("media", {
   "media.hero.showSlide": "Show slide {index}",
   "media.hero.previous": "Previous slide",
   "media.hero.next": "Next slide",
-  "media.hero.rated": "Rated",
   "media.hero.genres": "Genres",
   "media.hero.play": "Play",
   "media.hero.details": "Details",

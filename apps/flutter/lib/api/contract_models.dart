@@ -2961,6 +2961,7 @@ final class EpisodeInfo {
     required this.overview,
     required this.airDate,
     required this.runtimeMinutes,
+    required this.rating,
     required this.still,
   });
 
@@ -2971,6 +2972,7 @@ final class EpisodeInfo {
       overview: fields['overview'] as String?,
       airDate: fields['airDate'] as String?,
       runtimeMinutes: fields['runtimeMinutes'] as int?,
+      rating: (fields['rating'] as num?)?.toDouble(),
       still: readNullable(fields['still'], Artwork.fromJson),
     );
   }
@@ -2979,6 +2981,7 @@ final class EpisodeInfo {
   final String? overview;
   final String? airDate;
   final int? runtimeMinutes;
+  final double? rating;
   final Artwork? still;
 
   JsonMap toJson() => {
@@ -2986,6 +2989,7 @@ final class EpisodeInfo {
     'overview': overview,
     'airDate': airDate,
     'runtimeMinutes': runtimeMinutes,
+    'rating': rating,
     'still': still?.toJson(),
   };
 }
@@ -7799,6 +7803,7 @@ final class Season {
     required this.name,
     required this.overview,
     required this.poster,
+    required this.rating,
     required this.itemCount,
     required this.watchedCount,
     required this.favorite,
@@ -7811,6 +7816,7 @@ final class Season {
       name: fields['name'] as String,
       overview: fields['overview'] as String?,
       poster: readNullable(fields['poster'], Artwork.fromJson),
+      rating: (fields['rating'] as num?)?.toDouble(),
       itemCount: fields['itemCount'] as int,
       watchedCount: fields['watchedCount'] as int,
       favorite: fields['favorite'] as bool,
@@ -7821,6 +7827,7 @@ final class Season {
   final String name;
   final String? overview;
   final Artwork? poster;
+  final double? rating;
   final int itemCount;
   final int watchedCount;
   final bool favorite;
@@ -7830,6 +7837,7 @@ final class Season {
     'name': name,
     'overview': overview,
     'poster': poster?.toJson(),
+    'rating': rating,
     'itemCount': itemCount,
     'watchedCount': watchedCount,
     'favorite': favorite,

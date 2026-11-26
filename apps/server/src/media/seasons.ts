@@ -88,6 +88,7 @@ export async function seasonsByTitle(
       name: seasonName(c.number),
       overview: known?.overview ?? null,
       poster: toArtwork(known?.posterId ?? null, art),
+      rating: known?.rating ?? null,
       itemCount: c.n,
       watchedCount: c.watched,
       favorite: c.number !== null && favorites.has(`${c.titleId}/${c.number}`),

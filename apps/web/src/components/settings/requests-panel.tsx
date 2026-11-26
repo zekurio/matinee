@@ -98,8 +98,9 @@ export function RequestsPanel() {
     setEditOpen(true)
   }
 
-  const addButton = () => (
-    <Button onClick={() => edit()} disabled={!sourceList()}>
+  // Outline beside the section's title, filled as an empty list's one action.
+  const addButton = (variant: "default" | "outline") => (
+    <Button variant={variant} onClick={() => edit()} disabled={!sourceList()}>
       <Icon icon={Plus} />
       {tr("connections.add")}
     </Button>
@@ -110,7 +111,7 @@ export function RequestsPanel() {
       <SettingsSubsection
         id="connections"
         title={tr("connections.title")}
-        action={connectionList()?.length ? addButton() : undefined}
+        action={connectionList()?.length ? addButton("outline") : undefined}
       >
         <Switch>
           <Match when={connections.isPending || sources.isPending}>
@@ -143,7 +144,7 @@ export function RequestsPanel() {
                   {tr("connections.empty.description")}
                 </EmptyDescription>
               </EmptyHeader>
-              <EmptyContent>{addButton()}</EmptyContent>
+              <EmptyContent>{addButton("default")}</EmptyContent>
             </Empty>
           </Match>
           <Match when={true}>

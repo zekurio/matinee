@@ -1,22 +1,22 @@
 import { setServerThemeAccents } from "@matinee/ui/lib/theme"
-import { useQuery } from "@tanstack/solid-query"
-import { createEffect, snapshot } from "solid-js"
+import { type QueryClient, QueryObserver } from "@tanstack/solid-query"
 
 import { orpc } from "./rpc"
 
-/** Applies the server's accents for the Matinee theme, signed in or not. */
-export function ServerThemeAccents() {
-  const config = useQuery(() => orpc.auth.config.queryOptions())
-  // Hands each config's accents to the theme engine, which paints them.
-  createEffect(
-    () => {
-      // Read in the compute, as the engine reads plain objects.
-      const accents = config.data?.themeAccents
-      return accents ? snapshot(accents) : undefined
-    },
-    (accents) => {
-      if (accents) setServerThemeAccents(accents)
-    },
-  )
-  return null
+/**
+ * Hands the server's accents for the Matinee theme to the theme engine,
+ * on every page, signed in or not, for as long as the app runs. It watches
+ * the config query from outside the route tree, so no route has to mount
+ * anything for its buttons to wear the accent, and none can leave it out.
+ *
+ * Watching also asks for the config, and again when the tab gets the focus
+ * back, so an accent an admin changed elsewhere replaces the cached one.
+ */
+export function followServerThemeAccents(queryClient: QueryClient): void {
+  const config = new QueryObserver(queryClient, orpc.auth.config.queryOptions())
+  const apply = (accents = config.getCurrentResult().data?.themeAccents) => {
+    if (accents) setServerThemeAccents(accents)
+  }
+  config.subscribe((result) => apply(result.data?.themeAccents))
+  apply()
 }

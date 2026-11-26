@@ -17,9 +17,10 @@ import 'pending_marks.dart';
 import 'title_data.dart';
 import 'title_parts.dart';
 
-/// One season of a show: its poster and counts over the show's backdrop, Play
-/// for the episode up next in it, its episodes as a list, and the show's other
-/// seasons. [season] is null for the files without a season number.
+/// One season of a show: its poster, counts, and score over the show's
+/// backdrop, Play for the episode up next in it, its episodes as a list,
+/// and the show's other seasons. [season] is null for the files without a
+/// season number.
 class SeasonScreen extends ConsumerStatefulWidget {
   const SeasonScreen({super.key, required this.titleId, required this.season});
 
@@ -151,14 +152,13 @@ class _SeasonScreenState extends ConsumerState<SeasonScreen> with PendingMarks {
                           child: Text(name, style: headlineStyle(colors)),
                         ),
                         const SizedBox(height: 6),
-                        Text(
-                          [
+                        HeadingFacts(
+                          facts: [
                             l.mediaEpisodeCount(season.itemCount),
                             l.titleSeasonWatchedCount(season.watchedCount),
-                          ].join(' · '),
-                          style: KitText.sm.style(
-                            color: colors.foreground.withValues(alpha: .8),
-                          ),
+                          ],
+                          contentRating: title.contentRating,
+                          rating: season.rating,
                         ),
                       ],
                     ),

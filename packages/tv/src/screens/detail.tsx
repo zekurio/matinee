@@ -673,9 +673,9 @@ export function SeasonPage(props: { titleId: string; season: number | null }) {
 /**
  * The season over its show's backdrop: the show's name, the season, or
  * tabs for every season of a show with more than one, how many episodes
- * it has and are watched, and Play with the marks. Below, its episodes in
- * a row, with what the focused one is about above them. Focus starts on
- * the episode Play would start.
+ * it has and are watched, its score, and Play with the marks. Below, its
+ * episodes in a row, with what the focused one is about above them, its
+ * score with its facts. Focus starts on the episode Play would start.
  */
 function SeasonView(props: {
   title: Title
@@ -744,12 +744,14 @@ function SeasonView(props: {
             {seasonName(props.season.number)}
           </div>
         )}
-        <div class="t-facts dim85" style={{ "margin-top": "6rem" }}>
-          {[
+        <Facts
+          facts={[
             plural("mediaEpisodeCount", props.season.itemCount),
             plural("titleSeasonWatchedCount", props.season.watchedCount),
-          ].join("  ·  ")}
-        </div>
+          ]}
+          rating={props.season.rating}
+          style={{ "margin-top": "6rem" }}
+        />
         <div
           class="detail-actions"
           style={{ "margin-top": "18rem" }}
@@ -815,11 +817,12 @@ function SeasonView(props: {
                 })()}
               </div>
               {/* The time left in the episode Play resumes is on the button, so not here. */}
-              <div class="t-caption muted one-line">
-                {episodeFacts(item(), viewer, item().id !== next()?.id).join(
-                  "  ·  ",
-                )}
-              </div>
+              <Facts
+                facts={episodeFacts(item(), viewer, item().id !== next()?.id)}
+                rating={item().episode?.rating ?? null}
+                class="t-caption"
+                style={{ color: "var(--muted)" }}
+              />
               {item().episode?.overview && (
                 <div class="t-body dim78 lines season-overview">
                   {item().episode?.overview}
@@ -940,6 +943,8 @@ function EpisodeView(props: { item: MediaItem }) {
       <Facts
         facts={episodeFacts(props.item, viewer)}
         contentRating={title()?.contentRating}
+        // The episode's own score, never its show's.
+        rating={props.item.episode?.rating ?? null}
         style={{ "margin-top": "12rem" }}
       />
       <div class="detail-about">

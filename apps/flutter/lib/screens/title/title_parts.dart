@@ -839,7 +839,6 @@ class HeadingFacts extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     final contentRating = this.contentRating;
     final rating = this.rating;
@@ -863,25 +862,47 @@ class HeadingFacts extends StatelessWidget {
             children: [
               if (contentRating != null) Badge(contentRating, outlined: true),
               if (rating != null)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  spacing: 4,
-                  children: [
-                    KitIcon(
-                      Lucide.star,
-                      size: 14,
-                      color: colors.warning,
-                      label: l.mediaHeroRated,
-                    ),
-                    Text(
-                      formatRating(rating, l),
-                      style: KitText.sm.style(color: colors.foreground),
-                    ),
-                  ],
+                ScoreMark(
+                  rating,
+                  style: KitText.sm.style(color: colors.foreground),
                 ),
               for (final flag in flags) Badge(flag),
             ],
           ),
+      ],
+    );
+  }
+}
+
+/// A score out of ten by its star, as the web's `Score`: the star in the
+/// warning color, [starSize] across, and the number in [style]. A screen
+/// reader hears "Rated" and the number.
+class ScoreMark extends StatelessWidget {
+  const ScoreMark(
+    this.score, {
+    super.key,
+    required this.style,
+    this.starSize = 14,
+  });
+
+  final double score;
+  final TextStyle style;
+  final double starSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 4,
+      children: [
+        KitIcon(
+          Lucide.star,
+          size: starSize,
+          color: MatineeTheme.of(context).warning,
+          label: l.mediaHeroRated,
+        ),
+        Text(formatRating(score, l), style: style),
       ],
     );
   }
@@ -1511,8 +1532,9 @@ class NextUpEpisode extends StatelessWidget {
   }
 }
 
-/// An episode in a season's list: its still, name, and details, opening
-/// its page; Play beside it starts it, and a long press opens its menu.
+/// An episode in a season's list: its still, name, details, and score,
+/// opening its page; Play beside it starts it, and a long press opens its
+/// menu.
 class EpisodeRow extends StatelessWidget {
   const EpisodeRow({super.key, required this.item});
 
@@ -1529,6 +1551,7 @@ class EpisodeRow extends StatelessWidget {
       ?episodeNumberLabel(item, l),
       ?(timeLeft(item, l) ?? formatRuntime(runtimeMinutes(item), l)),
     ].join(' · ');
+    final score = item.episode?.rating;
     final overview = item.episode?.overview;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
@@ -1540,7 +1563,12 @@ class EpisodeRow extends StatelessWidget {
               onPressed: () => context.push(itemRoute(item)),
               onLongPress: () => showActions(context, ItemActions(item)),
               longPressLabel: l.titleMoreActions,
-              label: [names.title, if (detail.isNotEmpty) detail].join(', '),
+              label: [
+                names.title,
+                if (detail.isNotEmpty) detail,
+                if (score != null)
+                  l.webFiltersCardScoreSpoken(formatRating(score, l)),
+              ].join(', '),
               shape: CardMetrics.radius,
               builder: (context, state) => ExcludeSemantics(
                 child: Padding(
@@ -1590,13 +1618,32 @@ class EpisodeRow extends StatelessWidget {
                                     : FontWeight.w500,
                               ),
                             ),
-                            if (detail.isNotEmpty)
-                              Text(
-                                detail,
-                                maxLines: 1,
-                                style: KitText.xs.style(
-                                  color: colors.mutedForeground,
-                                ),
+                            // The score stays whole while the rest gives
+                            // way, as the web's cards have it.
+                            if (detail.isNotEmpty || score != null)
+                              Row(
+                                spacing: 8,
+                                children: [
+                                  if (detail.isNotEmpty)
+                                    Flexible(
+                                      child: Text(
+                                        detail,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: KitText.xs.style(
+                                          color: colors.mutedForeground,
+                                        ),
+                                      ),
+                                    ),
+                                  if (score != null)
+                                    ScoreMark(
+                                      score,
+                                      starSize: 12,
+                                      style: KitText.xs.style(
+                                        color: colors.mutedForeground,
+                                      ),
+                                    ),
+                                ],
                               ),
                             if (overview != null)
                               Text(

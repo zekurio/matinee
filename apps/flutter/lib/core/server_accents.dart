@@ -9,8 +9,11 @@ import 'session.dart';
 
 /// The accents the server in use gives the Matinee theme, from the
 /// branding an admin set (`auth.config`'s `themeAccents`), as the web's
-/// `ServerThemeAccents`. Null until known, and for a server with none,
+/// `followServerThemeAccents`. Null until known, and for a server with none,
 /// where the kit's preset shows as it is.
+///
+/// They are those of the server on screen: the one in use, or the one
+/// whose sign-in shows while it's being added.
 ///
 /// Each server's last answer is kept on the device, so its colour shows
 /// at once on the next start and stays while the server can't be
@@ -51,21 +54,18 @@ class ServerAccentsNotifier extends Notifier<ThemeAccents?> {
   @override
   ThemeAccents? build() {
     final auth = ref.watch(authStateProvider);
-    // A server being added isn't the one in use yet: its colour waits for
-    // the sign-in.
-    if (auth case SignedOut(adding: true)) return stateOrNull;
     final origin = _originOf(auth);
-    final reached = auth is SignedIn || auth is SignedOut;
     final mine = ++_generation;
     final same = origin == _origin;
     _origin = origin;
     if (origin == null) return null;
-    // A sign-in screen has the answer already.
-    if (auth is SignedOut && !auth.adding) {
+    // A sign-in screen has the answer already, and wears it: the screen is
+    // that server's, one being added as much as the one in use.
+    if (auth is SignedOut) {
       unawaited(_keep(origin, auth.config.themeAccents));
       return auth.config.themeAccents;
     }
-    unawaited(_load(mine, origin, ask: reached));
+    unawaited(_load(mine, origin, ask: auth is SignedIn));
     // Another server's colour never shows for this one.
     return same ? stateOrNull : null;
   }

@@ -153,12 +153,16 @@ function HeartButton(props: { favorite: Toggle; class?: string }) {
 export function FavoriteButton(props: {
   title: Pick<TitleSummary, "id" | "favorite">
 }) {
-  return <HeartButton favorite={useTitleFavorite(() => props.title)} />
+  // A prop is read lazily, so a hook called inside one would run again on
+  // each read, the click's too, outside the component.
+  const favorite = useTitleFavorite(() => props.title)
+  return <HeartButton favorite={favorite} />
 }
 
 /** The heart beside an episode's Play. Filled while it's a favorite. */
 export function ItemFavoriteButton(props: { item: MediaItem }) {
-  return <HeartButton favorite={useItemFavorite(() => props.item)} />
+  const favorite = useItemFavorite(() => props.item)
+  return <HeartButton favorite={favorite} />
 }
 
 /**
