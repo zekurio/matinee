@@ -168,10 +168,10 @@ export default defineMessages("requests", {
   "requests.done.gaveUpUndated": "Given up",
 
   // Empty, loading, and error states.
-  "requests.empty.setup.title": "Nothing fills your libraries yet",
+  "requests.empty.setup.title": "No requests yet",
   "requests.empty.setup.description":
-    "Add a connection, then choose the libraries it fills.",
-  "requests.empty.setup.action": "Set up requests",
+    "Accepted requests wait for their file to turn up in a library scan. Add Radarr or Sonarr to fetch them instead.",
+  "requests.empty.setup.action": "Add a connection",
   "requests.empty.none": "No requests yet",
   "requests.empty.noneHint":
     "When someone requests a film or show, it shows up here.",

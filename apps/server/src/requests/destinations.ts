@@ -11,16 +11,20 @@ import { loadRouting, type Plan, type Routing } from "./fulfilment/connections"
 import type { TitleFacts } from "./fulfilment/types"
 
 export type Destination = typeof library.$inferSelect & {
-  /** The name of the first connection whose settings land in it. */
-  connection: string
+  /**
+   * The name of the first connection whose settings land in it. Null when
+   * none does: a request there waits for its file to turn up in a scan.
+   */
+  connection: string | null
   /** Titles no rule picks out go here through the default connection. */
   home: boolean
 }
 
 /**
  * The libraries of a kind the viewer can ask into, by name: they can see
- * it, it has a metadata provider, and some connection's settings, anime
- * fields, or override rules send titles of the kind to a folder in it.
+ * it and it has a metadata provider. Each names the first connection
+ * whose settings, anime fields, or override rules send titles of the
+ * kind to a folder in it, if any does.
  */
 export async function destinations(
   viewer: Viewer,
@@ -38,14 +42,18 @@ export async function destinations(
   const reached = routes.reached(kind)
   const home = routes.defaultLibrary(kind)?.id
   return rows.flatMap((row) => {
-    const connection = reached.get(row.id)
     if (
-      !connection ||
       !row.metadataProvider ||
       (row.kind === "movies" ? kind !== "movie" : kind !== "show")
     )
       return []
-    return [{ ...row, connection, home: row.id === home }]
+    return [
+      {
+        ...row,
+        connection: reached.get(row.id) ?? null,
+        home: row.id === home,
+      },
+    ]
   })
 }
 
@@ -59,8 +67,8 @@ export type Route<T extends Destination = Destination> = {
  * Where a title goes when nobody chose. The library its request already
  * sits in, if the viewer can ask into it. Else where the default
  * connection for its kind sends it, with its anime fields and override
- * rules, and failing that, when the viewer can't see that library, the
- * first they can ask into. Nowhere without a default connection. Every
+ * rules, and failing that, when there is no default connection or the
+ * viewer can't see its library, the first they can ask into. Every
  * default destination comes from here, so a card, a title's page, and an
  * ask agree. `candidates` is what `destinations` gave for the kind.
  */
@@ -84,8 +92,7 @@ export function defaultDestination<T extends Destination>(
   )
   if (requested) return into(requested)
   const plan = routing.resolve(title.facts, title.user)
-  if (!plan) return undefined
-  const chosen = candidates.find((row) => row.id === plan.library.id)
+  const chosen = plan && candidates.find((row) => row.id === plan.library.id)
   if (chosen) return { library: chosen, plan }
   const first = candidates[0]
   return first && into(first)

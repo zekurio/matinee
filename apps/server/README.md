@@ -565,13 +565,17 @@ marked stale while a provider is down.
 
 ### Connections
 
-A connection sends approved requests to Radarr, to Sonarr, or By hand,
-where an admin adds the file and a scan finds it. Settings → Requests sets
-them up as Seerr does, with quality profiles, root folders, tags, Sonarr's
-anime fields, and override rules on users, genres, languages, and TMDB
-keywords. One connection is the default for films and one for shows, and a
-kind without one can't be requested. Rules on genres and keywords need
-`MATINEE_TMDB_API_KEY`.
+A connection sends approved requests to Radarr or Sonarr. Settings →
+Requests sets them up as Seerr does, with quality profiles, root folders,
+tags, Sonarr's anime fields, and override rules on users, genres,
+languages, and TMDB keywords. One connection is the default for films and
+one for shows. Rules on genres and keywords need `MATINEE_TMDB_API_KEY`.
+
+Requests don't need a connection, as in Seerr. Every library with a
+metadata provider takes them, and one that no connection fills holds an
+approved request until someone adds the file and a scan finds it. Without
+a default connection, a title goes to the first library of its kind the
+viewer can request into.
 
 A connection's API key comes from `MATINEE_CONNECTION_<SLUG>_API_KEY`, or
 its `_FILE` form, unless one is saved in Settings, which stores it as it
@@ -589,7 +593,8 @@ changes don't send it elsewhere.
 ### After approval
 
 An approved request goes out ten seconds later, and until then whoever
-asked can take it back. An unreachable connection is tried again after 5,
+asked can take it back. One with no connection goes nowhere and waits for
+its file. An unreachable connection is tried again after 5,
 10, and 20 seconds, and then the request waits under Needs attention for
 an admin. While a request is on its way, Matinee reads its progress once a
 minute. A movie has arrived when a scan finds its file, and a season with

@@ -6862,10 +6862,6 @@
   "@webServerFulfilmentFieldExternalUrl": {
     "description": "strings_web_server.xml"
   },
-  "webServerFulfilmentFieldFilmsFolder": "Films folder",
-  "@webServerFulfilmentFieldFilmsFolder": {
-    "description": "strings_web_server.xml"
-  },
   "webServerFulfilmentFieldMinimumAvailability": "Minimum availability",
   "@webServerFulfilmentFieldMinimumAvailability": {
     "description": "strings_web_server.xml"
@@ -6892,10 +6888,6 @@
   },
   "webServerFulfilmentFieldSeriesType": "Series type",
   "@webServerFulfilmentFieldSeriesType": {
-    "description": "strings_web_server.xml"
-  },
-  "webServerFulfilmentFieldShowsFolder": "Shows folder",
-  "@webServerFulfilmentFieldShowsFolder": {
     "description": "strings_web_server.xml"
   },
   "webServerFulfilmentFieldTagRequests": "Tag requests",
@@ -7017,10 +7009,6 @@
   },
   "webServerFulfilmentSlugConflict": "A connection already uses this slug. Choose another slug.",
   "@webServerFulfilmentSlugConflict": {
-    "description": "strings_web_server.xml"
-  },
-  "webServerFulfilmentSourceManual": "By hand",
-  "@webServerFulfilmentSourceManual": {
     "description": "strings_web_server.xml"
   },
   "webServerFulfilmentTitleNotFound": "The connection could not find this title. Check its external identifier.",
@@ -9605,7 +9593,7 @@
   "@webConnectionsEmptyTitle": {
     "description": "connections.empty.title"
   },
-  "webConnectionsEmptyDescription": "Add Radarr, Sonarr, or By hand, and make it the default for films or shows.",
+  "webConnectionsEmptyDescription": "Add Radarr or Sonarr, and make it the default for films or shows.",
   "@webConnectionsEmptyDescription": {
     "description": "connections.empty.description"
   },

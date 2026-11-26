@@ -340,7 +340,7 @@ class _DeclineSheetState extends ConsumerState<_DeclineSheet> {
           ),
           if (giveUp)
             Text(
-              // A by-hand connection holds nothing to keep.
+              // A connection that reports nothing back holds nothing to keep.
               keeps != null && keeps.reportsProgress
                   ? l.webRequestsGiveUpKeeps(keeps.name)
                   : l.webRequestsGiveUpTurnsUp,

@@ -902,11 +902,8 @@ async function moveTarget(viewer: Viewer, id: string, libraryId: string) {
   const metadata = detail
     ? (await detailProvider(moved, target.metadataLanguage)).value.externalIds
     : {}
+  // Null when no connection fills it, and the request waits for a scan.
   const plan = await planInto(row, target.id)
-  if (!plan)
-    throw new ORPCError("BAD_REQUEST", {
-      message: "Choose a library this title can go to.",
-    })
   return {
     from: row,
     library: target,
@@ -1019,8 +1016,8 @@ export async function moderate(
             provider: move.provider,
             providerId: move.providerId,
             externalIds: ids,
-            connectionId: move.plan.connection.id,
-            options: move.plan.options,
+            connectionId: move.plan?.connection.id ?? null,
+            options: move.plan?.options ?? null,
             updatedAt: new Date(),
           })
           .where(eq(request.id, id))

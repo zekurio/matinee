@@ -110,8 +110,9 @@ export const AdminRequestItem = RequestItem.extend({
       /** What kind of connection it is, like "Radarr". */
       sourceName: t.string(),
       /**
-       * Whether it reports how far along a request is. A by-hand one
-       * doesn't: once sent, its requests wait for someone to add the file.
+       * Whether it reports how far along a request is. Without that, or
+       * without a connection, an accepted request waits for its file to
+       * turn up in a library scan.
        */
       reportsProgress: t.boolean(),
     })
