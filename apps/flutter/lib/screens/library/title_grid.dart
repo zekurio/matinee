@@ -102,8 +102,10 @@ class _TitleGridState extends ConsumerState<TitleGrid> {
           request.kind == null &&
           (shown.kinds == null ||
               (shown.kinds!.movie > 0 && shown.kinds!.show > 0));
-      body = SliverOpacity(
+      body = SliverAnimatedOpacity(
         opacity: dimmed ? .5 : 1,
+        duration: KitMotion.of(context, KitMotion.enter),
+        curve: KitMotion.easing,
         sliver: NamedKinds(
           named: named,
           child: CardGrid(

@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'icon.dart';
+import 'motion.dart';
 import 'press_indication.dart';
 import 'theme.dart';
 
@@ -78,8 +79,25 @@ class RoundIconButton extends StatelessWidget {
                     fill,
                   ),
                 ),
-                child: Center(
+                // A new icon, as a title marked watched or a pause turned to
+                // play, fades and grows in over the last.
+                child: AnimatedSwitcher(
+                  duration: KitMotion.of(context, KitMotion.enter),
+                  reverseDuration: KitMotion.of(context, KitMotion.exit),
+                  switchInCurve: KitMotion.easing,
+                  switchOutCurve: KitMotion.exitEasing,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(
+                      scale: Tween<double>(
+                        begin: .6,
+                        end: 1,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  ),
                   child: KitIcon(
+                    key: ValueKey(icon),
                     icon,
                     size: iconSize,
                     shadows: [

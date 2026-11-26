@@ -565,7 +565,14 @@ class _OverviewState extends State<Overview> {
             builder: (context, state) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                text,
+                // Opens and closes to its new height, as Findroid's
+                // overview does with animateContentSize.
+                AnimatedSize(
+                  duration: KitMotion.of(context, KitMotion.move),
+                  curve: KitMotion.easing,
+                  alignment: AlignmentDirectional.topStart,
+                  child: text,
+                ),
                 ExcludeSemantics(
                   child: Text(
                     _open ? l.titleLess : l.titleMore,
