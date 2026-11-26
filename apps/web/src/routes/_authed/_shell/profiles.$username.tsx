@@ -171,7 +171,7 @@ function ProfileContent(props: { username: string }) {
           </p>
           <Link
             to="/"
-            class={buttonVariants({ variant: "secondary", className: "mt-6" })}
+            class={buttonVariants({ variant: "outline", className: "mt-6" })}
           >
             {tr("profile.backHome")}
           </Link>

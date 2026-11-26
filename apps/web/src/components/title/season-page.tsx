@@ -155,7 +155,7 @@ function SeasonMissing(props: { title: Title | undefined; error: unknown }) {
             <Link
               to="/"
               class={buttonVariants({
-                variant: "secondary",
+                variant: "outline",
                 className: "mt-6",
               })}
             >
@@ -168,7 +168,7 @@ function SeasonMissing(props: { title: Title | undefined; error: unknown }) {
           <Link
             to="/titles/$titleId"
             params={{ titleId: show().id }}
-            class={buttonVariants({ variant: "secondary", className: "mt-6" })}
+            class={buttonVariants({ variant: "outline", className: "mt-6" })}
           >
             {tr("title.season.all")}
           </Link>

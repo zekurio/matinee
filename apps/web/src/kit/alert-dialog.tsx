@@ -153,7 +153,7 @@ export function AlertDialogCancel(
       {...omit(props, "class", "variant", "size")}
       class={cn(
         buttonVariants({
-          variant: props.variant ?? "outline",
+          variant: props.variant ?? "ghost",
           size: props.size,
         }),
         props.class,

@@ -161,7 +161,7 @@ export function KitControls() {
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <Button size="sm">
+            <Button>
               <Icon icon={Plus} />
               Add library
             </Button>
