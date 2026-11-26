@@ -12,13 +12,16 @@
  * - `grid`: down a grid by whole rows, so none is ever cut off at the top.
  * - `near`: up or down, only as far as it takes to show the leaf.
  *
- * Lengths in the attributes are in the design's units, 960 to the
- * screen's width, as everywhere in the styles.
+ * Lengths in the attributes are in the design's units, as everywhere in
+ * the styles: see the font size on `html` in kit.css.
  */
 
-/** The pixels in one of the design's units. */
+/** The pixels in one of the design's units, the root's font size. */
 export function unit(): number {
-  return window.innerWidth / 960
+  const size = Number.parseFloat(
+    getComputedStyle(document.documentElement).fontSize,
+  )
+  return size > 0 ? size : window.innerWidth / 960
 }
 
 const GLIDE_MS = 220

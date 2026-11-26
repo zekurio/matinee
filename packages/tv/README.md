@@ -21,12 +21,21 @@ if (root) mountTv(root, platform)
 `Platform` is in `src/platform/runtime.ts`. It supplies the player engine,
 the remote's media keys, exit and screen-saver calls, the panel and HDR
 facts, the device platform, the app version, and the server a web page
-should start on. Everything else is shared, so a screen changed here
+should start on. A browser adds fullscreen and the way back to the desktop
+app, for TV mode. Everything else is shared, so a screen changed here
 changes in both entries.
 
 The Flutter app's TV screens are the other TV UI. This package began as
 their port and has fewer of them. Neither is the reference yet, so a TV
 change goes to both (see Clients in the root `AGENTS.md`).
+
+In a browser the TV UI is TV mode, for a couch PC. `src/platform/tv-mode.ts`
+holds the `localStorage` flag that the web app's account menu and
+Appearance settings switch on. Settings → This computer and the sign-in
+screen show the same switch, on, and the browser platform's `leaveTvMode`
+clears it and opens `/`. `src/input/gamepad.ts` maps a standard game
+controller to the remote's keys, and `src/input/tv-mode.ts` asks for
+fullscreen on the first gesture and hides the resting pointer.
 
 ## Strings
 

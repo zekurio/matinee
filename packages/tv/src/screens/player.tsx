@@ -13,7 +13,14 @@ import {
   SkipBack,
   SkipForward,
 } from "lucide"
-import { For, Show, createEffect, createSignal, onSettled } from "solid-js"
+import {
+  For,
+  Show,
+  createEffect,
+  createMemo,
+  createSignal,
+  onSettled,
+} from "solid-js"
 
 import { usePicture } from "../api/images"
 import { Page } from "../app/page"
@@ -205,11 +212,22 @@ function qualityOf(saved: string): Parameters<typeof openPlayer>[2] {
   return saved as Parameters<typeof openPlayer>[2]
 }
 
+/** A held key's first glide, in skips a second. */
+const GLIDE_SKIPS = 4
+/** Nor slower at first than this share of the video a second. */
+const GLIDE_MIN_SHARE = 1 / 120
+/** How long a held key takes to glide twice as fast, in seconds. */
+const GLIDE_DOUBLING = 0.75
+/** The fastest glide, as a share of the video a second. */
+const GLIDE_MAX_SHARE = 1 / 5
+
 /**
  * Where left and right on a remote have taken the seek bar. A press steps
  * by the skip length; a held key glides on from there, faster the longer
- * it's held, up to a tenth of the video a second. The player seeks once,
- * to the target, when the key comes up.
+ * it's held, up to a fifth of the video a second. In a film of 110
+ * minutes, that's the hour mark after about five seconds held, and an
+ * episode's middle after about three. The player seeks once, to the
+ * target, when the key comes up.
  */
 class KeySeek {
   target: number | null = null
@@ -233,10 +251,10 @@ class KeySeek {
       next = (start ?? from) + sign * step
     } else {
       const held = (at - this.heldSince) / 1000
-      const base = step * 3
+      const base = Math.max(step * GLIDE_SKIPS, duration * GLIDE_MIN_SHARE)
       const rate = Math.min(
-        base * 2 ** (held / 1.5),
-        Math.max(duration * 0.1, base),
+        base * 2 ** (held / GLIDE_DOUBLING),
+        Math.max(duration * GLIDE_MAX_SHARE, base),
       )
       next =
         start +
@@ -722,7 +740,13 @@ function Controls(props: {
   onClose: () => void
   onEpisode: (item: MediaItem) => void
 }) {
+  // `controller()` changes with every tick of the position, and an
+  // effect runs its apply each time its compute does, so effects read
+  // memos, which pass a change on only when the value is new, and take
+  // what they need from their compute.
   const controller = useObserved(props.controller)
+  const playing = createMemo(() => controller().playing)
+  const ended = createMemo(() => controller().ended)
   let root: HTMLDivElement | undefined
   const [controls, setControls] = createSignal(true)
   const [menu, setMenu] = createSignal<Menu | null>(null)
@@ -748,26 +772,28 @@ function Controls(props: {
 
   // Once the credits start or the file ends: the next episode, counting down.
   const upcoming = () => (controller().offersNext ? controller().next : null)
-  const [cancelled, setCancelled] = createSignal(!props.autoplay)
-  const [left, setLeft] = createSignal(UP_NEXT_SECONDS)
-  // Offered before the file ended, it counts down to the end and starts there.
-  let early = false
-  createEffect(
-    () => upcoming()?.id,
-    () => {
-      if (upcoming()) early = !controller().ended
-    },
-  )
-  createEffect(
-    () => [upcoming()?.id, cancelled(), controller().ended, left()] as const,
+  // The episode on offer, and whether it came before the file ended, as
+  // it was when offered: the memo holds its first value until the episode
+  // changes. Offered early, it counts down to the end and starts there.
+  const offer = createMemo(
     () => {
       const item = upcoming()
-      if (!item || cancelled() || !controller().ended) return
-      if (early || left() <= 0) {
-        props.onEpisode(item)
+      return item ? { item, early: !ended() } : null
+    },
+    { equals: (a, b) => a?.item.id === b?.item.id },
+  )
+  const upcomingId = () => offer()?.item.id ?? null
+  const [cancelled, setCancelled] = createSignal(!props.autoplay)
+  const [left, setLeft] = createSignal(UP_NEXT_SECONDS)
+  createEffect(
+    () => [offer(), cancelled(), ended(), left()] as const,
+    ([current, isCancelled, isEnded, remaining]) => {
+      if (!current || isCancelled || !isEnded) return
+      if (current.early || remaining <= 0) {
+        props.onEpisode(current.item)
         return
       }
-      const timer = window.setTimeout(() => setLeft(left() - 1), 1000)
+      const timer = window.setTimeout(() => setLeft(remaining - 1), 1000)
       return () => window.clearTimeout(timer)
     },
   )
@@ -776,8 +802,10 @@ function Controls(props: {
 
   // Otherwise Skip intro, or the like, while the video is in a segment the server found.
   const segment = () => controller().segment
-  const segmentKey = () =>
-    segment() ? `${segment()!.kind}-${segment()!.start}` : null
+  const segmentKey = createMemo(() => {
+    const current = segment()
+    return current ? `${current.kind}-${current.start}` : null
+  })
   const [fresh, setFresh] = createSignal(true)
   const [skipAway, setSkipAway] = createSignal(false)
   createEffect(
@@ -819,13 +847,15 @@ function Controls(props: {
   }
   const away = () => (upcoming() ? nextAway() : skipAway())
   // The button shows alone on the picture, and takes focus there.
-  const onPicture = () => action() !== null && !away() && !controls()
+  const hasAction = createMemo(() => action() !== null && !away())
+  const onPicture = createMemo(() => hasAction() && !controls())
   // A file that ended with nothing after it brings the controls.
-  const visible = () => controls() || (controller().ended && !upcoming())
+  const visible = createMemo(
+    () => controls() || (ended() && upcomingId() === null),
+  )
 
   createEffect(
-    () =>
-      [controls(), controller().playing, menu(), scrub(), touched()] as const,
+    () => [controls(), playing(), menu(), scrub(), touched()] as const,
     ([shown, playing, open, seeking]) => {
       if (!shown || !playing || open !== null || seeking !== null) return
       const timer = window.setTimeout(() => setControls(false), HIDE_AFTER_MS)
@@ -838,26 +868,19 @@ function Controls(props: {
 
   // Focus follows the controls: on play, the seek bar after a held arrow,
   // or the button for the next episode, as they come; on that button or
-  // the screen itself, which takes the keys, as they go.
-  const hasAction = () => action() !== null && !away()
+  // the screen itself, which takes the keys, as they go. A file that ends
+  // with the controls up hands focus to the button for the next one.
   createEffect(
-    () => [visible(), onPicture(), menu() === null, hasAction()] as const,
-    () => {
-      if (menu() !== null) return
-      if (!visible()) {
-        focusOn(leaf(onPicture() ? "corner" : "screen"))
+    () => [visible(), onPicture(), menu(), hasAction(), upcomingId()] as const,
+    ([shown, picture, open, offering]) => {
+      if (open !== null) return
+      if (!shown) {
+        focusOn(leaf(picture ? "corner" : "screen"))
         return
       }
-      const target = focusSeek ? "seek" : hasAction() ? "action" : "play"
+      const target = focusSeek ? "seek" : offering ? "action" : "play"
       focusSeek = false
       if (!focusOn(leaf(target))) focusOn(leaf("play"))
-    },
-  )
-  // A file that ends with the controls up hands focus to the button.
-  createEffect(
-    () => upcoming()?.id,
-    () => {
-      if (upcoming() && controls() && menu() === null) focusOn(leaf("action"))
     },
   )
   useRefocus(
@@ -888,7 +911,7 @@ function Controls(props: {
     setMenu(which)
   }
 
-  useKeyTap((key, phase, event) => {
+  useKeyTap((key, phase, keyPress) => {
     const down = phase === "down"
     if (down) setTouched((count) => count + 1)
     if (!down && swallow === key) {
@@ -930,8 +953,8 @@ function Controls(props: {
     if (direction !== 0 && (seeking === key || !visible() || onSeekBar)) {
       if (down) {
         seeking = key
-        press(direction, event.repeat, event.timeStamp)
-        if (event.repeat && !controls()) {
+        press(direction, keyPress.repeat, keyPress.timeStamp)
+        if (keyPress.repeat && !controls()) {
           focusSeek = true
           setControls(true)
         }

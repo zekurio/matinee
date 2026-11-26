@@ -8,4 +8,7 @@ import { browserPlatform, mountTv } from "@matinee/tv"
  * don't follow the TV's.
  */
 const root = document.getElementById("app")
-if (root) mountTv(root, browserPlatform)
+// The page comes with the server, so it has the server's version.
+if (root) {
+  mountTv(root, { ...browserPlatform, appVersion: () => __MATINEE_VERSION__ })
+}

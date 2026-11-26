@@ -4,13 +4,17 @@ import type {
   PlaybackPreferences,
   Session as AccountSession,
 } from "@matinee/contracts"
+import { audioFormatName, videoCodecName } from "@matinee/contracts/codecs"
 import type { JSX } from "@solidjs/web"
 import {
   AudioLines,
   Captions,
+  Computer,
   type IconNode,
   Info,
   LogOut,
+  Maximize,
+  Minimize,
   Monitor,
   RefreshCw,
   Server,
@@ -20,7 +24,15 @@ import {
   UserRound,
   X,
 } from "lucide"
-import { For, Show, Switch, Match, createEffect, createSignal } from "solid-js"
+import {
+  For,
+  Show,
+  Switch,
+  Match,
+  createEffect,
+  createSignal,
+  onSettled,
+} from "solid-js"
 
 import { Page } from "../app/page"
 import { useApp, useKept, useLoader } from "../app/scope"
@@ -42,7 +54,7 @@ import {
 } from "../model/format"
 import { platform } from "../platform/runtime"
 import { ORIGINAL_QUALITY } from "../player/controller"
-import { encodeVideoChoices } from "../player/device"
+import { encodeVideoChoices, playbackDevice } from "../player/device"
 import {
   AUTOMATIC,
   playerPrefs,
@@ -67,8 +79,21 @@ const CATEGORIES: readonly Category[] = [
   { key: "languages", icon: AudioLines, title: "playbackLanguagesTitle" },
   { key: "devices", icon: Monitor, title: "tvSettingsDevices" },
   { key: "account", icon: UserRound, title: "tvSettingsAccount" },
+  // The couch PC's: TV mode and the browser's fullscreen, which a TV has
+  // no settings for.
+  { key: "computer", icon: Computer, title: "settingsThisComputer" },
   { key: "about", icon: Info, title: "aboutTitle" },
 ]
+
+/** The categories this host has settings for. */
+function categories(): readonly Category[] {
+  return CATEGORIES.filter(
+    (category) =>
+      category.key !== "computer" ||
+      platform().toggleFullscreen !== undefined ||
+      platform().leaveTvMode !== undefined,
+  )
+}
 
 /** A row's panel: a choice among options, opened from the row named `from`. */
 type Picker = {
@@ -670,37 +695,125 @@ function engineVersion(): string {
   return /Chrom(?:e|ium)\/([\d.]+)/.exec(navigator.userAgent)?.[1] ?? "?"
 }
 
-/** The app and the TV it runs on, for telling what a problem happened on. */
+/**
+ * The app and what it runs on, for telling what a problem happened on. A
+ * browser has no model, so it has no row for one, and its system is the
+ * one the browser says it runs on.
+ */
 function AboutRows() {
-  const rows = (): [string, string][] => [
-    ["Matinee", platform().appVersion() ?? "dev"],
-    [tr("tizen_about_model"), platform().model ?? "?"],
-    [
-      tr("tizen_about_system"),
-      platform().tizenVersion === null
-        ? "?"
-        : `Tizen ${platform().tizenVersion}`,
-    ],
-    [tr("tizen_about_engine"), `Chromium ${engineVersion()}`],
-    [
-      tr("tizen_about_player"),
-      tr(
-        platform().hasNativePlayer ? "tizen_player_tv" : "tizen_player_browser",
-      ),
-    ],
-  ]
+  const system = () => {
+    const tizen = platform().tizenVersion
+    if (tizen !== null) return `Tizen ${tizen}`
+    const kind = platform().devicePlatform
+    return PLATFORM_NAMES.get(kind) ?? kind
+  }
+  const rows = (): [string, string][] => {
+    const model = platform().model
+    return [
+      ["Matinee", platform().appVersion() ?? "dev"],
+      ...(model === null
+        ? []
+        : [[tr("tizen_about_model"), model] satisfies [string, string]]),
+      [tr("tizen_about_system"), system()],
+      [tr("tizen_about_engine"), `Chromium ${engineVersion()}`],
+      [
+        tr("tizen_about_player"),
+        tr(
+          platform().hasNativePlayer
+            ? "tizen_player_tv"
+            : "tizen_player_browser",
+        ),
+      ],
+    ]
+  }
+  // What the player decodes, as this app tells the server: what plays as
+  // it is, where everything else is converted first.
+  const decodes = () => {
+    const device = playbackDevice()
+    const names = (list: string[]) => [...new Set(list)].join(", ")
+    return [
+      [
+        tr("mediaInfoVideo"),
+        names(device.video.map((decoder) => videoCodecName(decoder.codec))),
+      ],
+      [
+        tr("mediaInfoAudio"),
+        names(device.audio.map((codec) => audioFormatName(codec))),
+      ],
+    ] satisfies [string, string][]
+  }
   return (
-    <For each={rows()}>
-      {([title, value]) => (
-        <ListItem
-          fid={title}
-          title={title}
-          quiet
-          trailing={<ListValue value={value} chevron={false} />}
-          onPress={() => {}}
+    <>
+      <For each={rows()}>
+        {([title, value]) => (
+          <ListItem
+            fid={title}
+            title={title}
+            quiet
+            trailing={<ListValue value={value} chevron={false} />}
+            onPress={() => {}}
+          />
+        )}
+      </For>
+      <For each={decodes()}>
+        {([title, list]) => (
+          <ListItem
+            fid={title}
+            title={title}
+            subtitle={list}
+            quiet
+            onPress={() => {}}
+          />
+        )}
+      </For>
+    </>
+  )
+}
+
+/**
+ * The couch PC's own settings: TV mode's switch, the one the desktop app's
+ * account menu and Appearance settings show, here on, and the browser's
+ * fullscreen. A TV has no desktop app and fills its screen, so it has
+ * neither row.
+ */
+function ComputerRows() {
+  const [fullscreen, setFullscreen] = createSignal(
+    Boolean(document.fullscreenElement),
+  )
+  onSettled(() => {
+    const update = () => setFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener("fullscreenchange", update)
+    return () => document.removeEventListener("fullscreenchange", update)
+  })
+  const toggle = platform().toggleFullscreen
+  const leave = platform().leaveTvMode
+  return (
+    <>
+      {leave && (
+        <SwitchRow
+          fid="tvMode"
+          title={tr("settingsTvMode")}
+          description={tr("tizen_settings_tv_mode_description")}
+          checked
+          onChange={(on) => {
+            if (!on) leave()
+          }}
         />
       )}
-    </For>
+      {toggle && (
+        <ListItem
+          fid="fullscreen"
+          title={tr(
+            fullscreen()
+              ? "tizen_settings_fullscreen_exit"
+              : "tizen_settings_fullscreen",
+          )}
+          icon={fullscreen() ? Minimize : Maximize}
+          quiet
+          onPress={() => toggle()}
+        />
+      )}
+    </>
   )
 }
 
@@ -712,7 +825,7 @@ function AboutRows() {
 export function SettingsPage(props: { category?: string }) {
   const [selected, setSelected] = useKept(
     "category",
-    CATEGORIES.some((category) => category.key === props.category)
+    categories().some((category) => category.key === props.category)
       ? (props.category ?? "playback")
       : "playback",
   )
@@ -759,6 +872,8 @@ export function SettingsPage(props: { category?: string }) {
         )
       case "account":
         return <AccountRows onServers={() => setServers(true)} />
+      case "computer":
+        return <ComputerRows />
       case "about":
         return <AboutRows />
       default:
@@ -773,7 +888,7 @@ export function SettingsPage(props: { category?: string }) {
           {tr("shellSettings")}
         </div>
         <div class="settings-list" data-fg="categories" data-fk="col">
-          <For each={CATEGORIES}>
+          <For each={categories()}>
             {(category) => (
               <ListItem
                 fid={category.key}

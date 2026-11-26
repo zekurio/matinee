@@ -18,6 +18,7 @@ import { AppContext, type AppScope, PageContext, Toasts } from "../app/scope"
 import { nameOf, session } from "../auth/session"
 import { locale, tr } from "../i18n"
 import { focused, focusOn } from "../input/focus"
+import { startGamepads } from "../input/gamepad"
 import { refocus, useBack } from "../input/navigation"
 import { cx, Icon, Tap } from "../kit/base"
 import { Avatar, Picture } from "../kit/cards"
@@ -244,7 +245,6 @@ function Drawer(props: {
     >
       <div class="drawer-entries" data-fg="drawer" data-fk="col">
         {draw(profile())}
-        <span class="drawer-gap" />
         <For each={entries()}>{(entry) => draw(entry)}</For>
         <span class="drawer-space" />
         {draw(settings())}
@@ -334,6 +334,9 @@ export function SignedInApp(props: {
   let root: HTMLDivElement | undefined
 
   onSettled(() => forgetPictures)
+  // A browser's game controller works the remote's keys. Start plays and
+  // pauses on the player, and opens the focused item's menu elsewhere.
+  onSettled(() => startGamepads(() => (playing() ? "playPause" : "menu")))
   // How many movies and shows there are, so the drawer offers only the kinds the server has.
   createEffect(
     () => viewer().version,
@@ -372,11 +375,15 @@ export function SignedInApp(props: {
   }
 
   // Under every page's own Back: out of the drawer, back a page, and from
-  // Home into the drawer, then out of the app.
+  // Home into the drawer, then out of the app. A browser has no app to
+  // leave, so there Back closes the drawer again.
   useBack(() => {
     if (drawerOpen() && !onHome()) toPage()
-    else if (drawerOpen()) platform().exitApp()
-    else if (nav().canGoBack) nav().back()
+    else if (drawerOpen()) {
+      // A TV's Back leaves the app from Home; a browser has a page under it.
+      if (platform().onTv) platform().exitApp()
+      else toPage()
+    } else if (nav().canGoBack) nav().back()
     else toDrawer()
   })
 

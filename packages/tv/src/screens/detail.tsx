@@ -303,11 +303,13 @@ function EpisodesRow(props: {
   const items = useSeasonItems(props.titleId, props.season)
   const list = () =>
     (items().value ?? []).filter((item) => item.id !== props.exclude)
+  // Props are read in the compute: `start` is worked out by the parent,
+  // and reading one of those while an effect applies stops Solid.
   createEffect(
-    () => list(),
-    (current) => {
-      if (props.start && current.some((item) => item.id === props.start)) {
-        scope.memory.seed(props.name, props.start)
+    () => [list(), props.start, props.name] as const,
+    ([current, start, name]) => {
+      if (start && current.some((item) => item.id === start)) {
+        scope.memory.seed(name, start)
       }
     },
   )

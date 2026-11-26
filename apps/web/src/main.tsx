@@ -4,6 +4,7 @@ import {
   API_REFERENCE_PAGE_PATH,
   INVITE_PAGE_PATH,
 } from "@matinee/contracts/paths"
+import { isTvMode } from "@matinee/tv/tv-mode"
 import { initTheme } from "@matinee/ui/lib/theme"
 import { render } from "@solidjs/web"
 import { QueryClientProvider } from "@tanstack/solid-query"
@@ -17,6 +18,11 @@ import { warmUiSdk } from "@/lib/warm-styles"
 import { applyLanguage } from "@/stores/language"
 
 import { routeTree } from "./routeTree.gen"
+
+// A browser in TV mode starts on the TV UI, a document of its own, whose
+// Settings and sign-in screen have the switch that turns it off. Only the
+// root moves: sign-in, setup, and the link pages stay.
+if (location.pathname === "/" && isTvMode()) location.replace("/tv/")
 
 initTheme()
 syncUiText()

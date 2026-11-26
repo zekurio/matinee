@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./tv-mode": "./src/platform/tv-mode.ts",
     "./styles": "./src/styles/app.css"
   },
   "scripts": {

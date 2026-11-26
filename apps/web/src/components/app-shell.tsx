@@ -10,6 +10,7 @@ import {
   Search,
   Settings,
   Shield,
+  Tv,
   UsersRound,
 } from "lucide"
 import { createSignal, For, onSettled, type ParentProps, Show } from "solid-js"
@@ -18,6 +19,7 @@ import { tr } from "@/i18n"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuCheckboxItem,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -30,6 +32,7 @@ import { useOpenSettings, useSettingsLocation } from "@/lib/settings"
 import { useSignOut } from "@/lib/sign-out"
 import { isPhone } from "@/lib/viewport"
 import { focusSearch, resetSearch } from "@/stores/search"
+import { enterTvMode, leaveTvMode, tvMode } from "@/stores/tv-mode"
 
 import { Logo, LogoMark } from "./brand"
 import {
@@ -271,8 +274,8 @@ function AccountName(props: { user: User }) {
 
 /**
  * The avatar at the bar's end, and the account's menu from it: the
- * profile, the watch party, statistics, and signing out. Settings is on
- * the rail.
+ * profile, the watch party, statistics, TV mode, and signing out.
+ * Settings is on the rail.
  */
 function AccountMenu(props: { user: User; class?: string }) {
   const signOut = useSignOut()
@@ -347,6 +350,16 @@ function AccountMenu(props: { user: User; class?: string }) {
           <DropdownMenuItem onSelect={() => void navigate({ to: "/stats" })}>
             {item(ChartColumn, tr("shell.statistics"))}
           </DropdownMenuItem>
+          {/* TV mode's switch, as Settings has it. The TV UI's own Settings
+              turns it off again. */}
+          <DropdownMenuCheckboxItem
+            checked={tvMode()}
+            onCheckedChange={(on: boolean) =>
+              on ? enterTvMode() : leaveTvMode()
+            }
+          >
+            {item(Tv, tr("shell.tvMode"))}
+          </DropdownMenuCheckboxItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"

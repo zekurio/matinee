@@ -48,20 +48,23 @@ export function SidePanel(props: {
 
   useBack(props.onBack, () => props.open)
 
-  const toStart = () => {
+  // `initial` is passed in rather than read here, since an effect reads
+  // its props in its compute: a prop the parent works out builds a memo
+  // when it's read, and one built while an effect applies stops Solid.
+  const toStart = (initial: string | undefined) => {
     const root = list
     if (!root) return false
     const wanted =
-      props.initial === undefined
+      initial === undefined
         ? null
         : root.querySelector<HTMLElement>(
-            `[data-f="${props.initial.replace(/["\\]/g, "\\$&")}"]`,
+            `[data-f="${initial.replace(/["\\]/g, "\\$&")}"]`,
           )
     return focusOn(wanted, { instant: true }) || focusOn(root)
   }
   useRefocus(
     () => {
-      toStart()
+      toStart(props.initial)
     },
     () => props.open,
   )
@@ -71,7 +74,7 @@ export function SidePanel(props: {
     () => props.open,
     (open) => {
       if (!open) return
-      if (!shown()) setShown(true)
+      setShown(true)
       opener = focused()
     },
   )
@@ -85,24 +88,33 @@ export function SidePanel(props: {
     },
   )
 
+  // `shown` too: the first time it opens, the rows are drawn only once
+  // `shown` turns on, after the update that opened it, and there's no row
+  // to focus before then.
   createEffect(
-    () => [props.open, props.loading, props.focusKey] as const,
-    ([open, loading]) => {
-      if (open && !loading) toStart()
+    () =>
+      [
+        props.open,
+        props.loading,
+        props.focusKey,
+        shown(),
+        props.initial,
+      ] as const,
+    ([open, loading, , , initial]) => {
+      if (open && !loading) toStart(initial)
     },
   )
 
   let wasOpen = false
   createEffect(
-    () => props.open,
-    (open) => {
+    () => [props.open, props.returnFocus] as const,
+    ([open, back]) => {
       if (open) {
         wasOpen = true
         return
       }
       if (!wasOpen) return
       wasOpen = false
-      const back = props.returnFocus
       if (back !== false) {
         if (back) back()
         else if (!focusOn(opener)) refocus()

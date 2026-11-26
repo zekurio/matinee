@@ -1,7 +1,12 @@
 import type { JSX } from "@solidjs/web"
 import { Check, ChevronRight, type IconNode } from "lucide"
+import { createEffect } from "solid-js"
 
+import { unit } from "../input/scroll"
 import { type AriaRole, cx, Icon, Tap, type TapProps } from "./base"
+
+/** The widest an `IconButton`'s label opens, in the design's units. */
+const ICON_LABEL_MAX = 240
 
 type Shared = Pick<
   TapProps,
@@ -79,13 +84,48 @@ export function IconButton(
 ) {
   const style = (): JSX.CSSProperties | undefined =>
     props.tint ? { "--tint": props.tint } : undefined
+  let own: HTMLDivElement | null = null
+  let label: HTMLSpanElement | undefined
+  // The label opens to its own width, up to a cap, so the width eases
+  // the whole way both ways. A max-width far past the words would open
+  // in a jump and close after a pause.
+  const open = () => {
+    if (!label) return
+    // `scrollWidth` rounds to whole pixels, and a label held a fraction
+    // short of its words ends in an ellipsis, so it's measured exactly
+    // and rounded up.
+    const range = document.createRange()
+    range.selectNodeContents(label)
+    const words = Math.ceil(range.getBoundingClientRect().width)
+    const width = Math.min(words, ICON_LABEL_MAX * unit())
+    label.style.maxWidth = `${width}px`
+  }
+  const close = () => {
+    if (label) label.style.maxWidth = ""
+  }
+  // New words while it's open, as a mark that was just pressed.
+  createEffect(
+    () => props.label,
+    () => {
+      if (own && own === document.activeElement) open()
+    },
+  )
   return (
     <Tap
       fid={props.fid}
-      onFocus={props.onFocus}
-      onBlur={props.onBlur}
+      onFocus={() => {
+        open()
+        props.onFocus?.()
+      }}
+      onBlur={() => {
+        close()
+        props.onBlur?.()
+      }}
       onKeyDown={props.onKeyDown}
-      tapRef={props.tapRef}
+      tapRef={(node) => {
+        own = node
+        props.tapRef?.(node)
+      }}
       onMenu={props.onMenu}
       onPress={props.onPress}
       label={props.label}
@@ -96,7 +136,9 @@ export function IconButton(
         <Icon icon={props.icon} size={20} filled={props.filled} />
         {props.children}
       </span>
-      <span class="label">{props.label}</span>
+      <span ref={(node) => (label = node)} class="label">
+        {props.label}
+      </span>
     </Tap>
   )
 }
