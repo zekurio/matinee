@@ -57,8 +57,27 @@ Future<void> _push(
 double _x(WidgetTester tester, Key key) =>
     tester.getTopLeft(find.byKey(key)).dx;
 
+/// How opaque the page [key] is drawn, through every fade around it.
+double _opacity(WidgetTester tester, Key key) {
+  var opacity = 1.0;
+  final around = find.ancestor(
+    of: find.byKey(key),
+    matching: find.byWidgetPredicate(
+      (widget) => widget is Opacity || widget is FadeTransition,
+    ),
+  );
+  for (final widget in tester.widgetList(around)) {
+    opacity *= switch (widget) {
+      Opacity(:final opacity) => opacity,
+      FadeTransition(:final opacity) => opacity.value,
+      _ => 1.0,
+    };
+  }
+  return opacity;
+}
+
 Future<void> _at(WidgetTester tester, double fraction) =>
-    tester.pump(KitMotion.move * fraction);
+    tester.pump(KitMotion.page * fraction);
 
 /// Android telling the app about its back gesture, as its embedding does.
 Future<void> _gesture(
@@ -96,26 +115,37 @@ Future<NavigatorState> _swiped(
 }
 
 void main() {
-  final half = KitMotion.easing.transform(.5);
-  double back(double progress) => KitMotion.easing.transform(progress);
+  final half = KitMotion.pageEasing.transform(.5);
+  double ease(double t) => KitMotion.pageEasing.transform(t);
 
-  testWidgets('a page slides in over the one it covers, which moves aside', (
+  testWidgets('a page fades in over the one it covers, which holds still', (
     tester,
   ) async {
     final navigator = await _app(tester);
     await _push(tester, navigator);
     await _at(tester, .5);
 
-    expect(_x(tester, _above), moreOrLessEquals(_width * (1 - half)));
-    expect(_x(tester, _below), moreOrLessEquals(-_width / 4 * half));
+    expect(_opacity(tester, _above), moreOrLessEquals(half));
+    expect(_x(tester, _above), 0);
+    expect(_opacity(tester, _below), 1);
+    expect(_x(tester, _below), 0);
 
     await tester.pumpAndSettle();
-    expect(_x(tester, _above), 0);
+    expect(_opacity(tester, _above), 1);
   });
 
-  testWidgets('going back plays it backwards, on the same curve', (
+  testWidgets('it starts gently, so the fade is seen from its first frames', (
     tester,
   ) async {
+    final navigator = await _app(tester);
+    await _push(tester, navigator);
+    await _at(tester, .25);
+
+    // The web's curve was three quarters in by now.
+    expect(_opacity(tester, _above), lessThan(.3));
+  });
+
+  testWidgets('going back fades it out, on the same curve', (tester) async {
     final navigator = await _app(tester);
     await _push(tester, navigator);
     await tester.pumpAndSettle();
@@ -125,15 +155,15 @@ void main() {
     await _at(tester, .5);
 
     // Half the time gone is as far as the push was at half its time.
-    expect(_x(tester, _above), moreOrLessEquals(_width * half));
-    expect(_x(tester, _below), moreOrLessEquals(-_width / 4 * (1 - half)));
+    expect(_opacity(tester, _above), moreOrLessEquals(1 - half));
+    expect(_opacity(tester, _below), 1);
 
     await tester.pumpAndSettle();
     expect(find.byKey(_above), findsNothing);
     expect(_x(tester, _below), 0);
   });
 
-  testWidgets('a page of another kind below moves aside the same', (
+  testWidgets('a page of another kind below holds still the same', (
     tester,
   ) async {
     final navigator = await _app(
@@ -147,16 +177,17 @@ void main() {
     await _push(tester, navigator);
     await _at(tester, .5);
 
-    expect(_x(tester, _below), moreOrLessEquals(-_width / 4 * half));
+    expect(_opacity(tester, _below), 1);
+    expect(_x(tester, _below), 0);
   });
 
-  testWidgets('with less motion asked for, nothing slides', (tester) async {
+  testWidgets('with less motion asked for, nothing fades', (tester) async {
     final navigator = await _app(tester, reduceMotion: true);
     await _push(tester, navigator);
     await _at(tester, .5);
 
+    expect(_opacity(tester, _above), 1);
     expect(_x(tester, _above), 0);
-    expect(_x(tester, _below), 0);
   });
 
   testWidgets("iOS keeps Cupertino's slide", (tester) async {
@@ -166,17 +197,17 @@ void main() {
     expect(find.byType(CupertinoPageTransition), findsWidgets);
   }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
-  testWidgets('the back gesture takes the page back by the finger', (
+  testWidgets('the back gesture fades the page out by the finger', (
     tester,
   ) async {
     await _swiped(tester, .5);
 
     // Where going back is when half its time is gone.
-    expect(_x(tester, _above), moreOrLessEquals(_width * half));
-    expect(_x(tester, _below), moreOrLessEquals(-_width / 4 * (1 - half)));
-    // Moved, never shrunk.
+    expect(_opacity(tester, _above), moreOrLessEquals(1 - half));
+    expect(_opacity(tester, _below), 1);
+    // Faded, never moved or shrunk.
     expect(tester.getSize(find.byKey(_above)), const Size(_width, 600));
-    expect(tester.getTopLeft(find.byKey(_above)).dy, 0);
+    expect(tester.getTopLeft(find.byKey(_above)), Offset.zero);
   });
 
   testWidgets('let go, the page goes on from where the finger left it', (
@@ -185,9 +216,9 @@ void main() {
     final navigator = await _swiped(tester, .5);
     await _gesture(tester, 'commitBackGesture');
 
-    expect(_x(tester, _above), moreOrLessEquals(_width * half));
+    expect(_opacity(tester, _above), moreOrLessEquals(1 - half));
     await _at(tester, .25);
-    expect(_x(tester, _above), moreOrLessEquals(_width * back(.75)));
+    expect(_opacity(tester, _above), moreOrLessEquals(1 - ease(.75)));
 
     await tester.pumpAndSettle();
     expect(find.byKey(_above), findsNothing);
@@ -201,12 +232,12 @@ void main() {
     final navigator = await _swiped(tester, .5);
     await _gesture(tester, 'cancelBackGesture');
 
-    expect(_x(tester, _above), moreOrLessEquals(_width * half));
+    expect(_opacity(tester, _above), moreOrLessEquals(1 - half));
     await _at(tester, .25);
-    expect(_x(tester, _above), moreOrLessEquals(_width * back(.25)));
+    expect(_opacity(tester, _above), moreOrLessEquals(1 - ease(.25)));
 
     await tester.pumpAndSettle();
-    expect(_x(tester, _above), 0);
+    expect(_opacity(tester, _above), 1);
     expect(navigator.userGestureInProgress, isFalse);
   });
 
@@ -223,7 +254,7 @@ void main() {
         child: page,
       ),
     );
-    expect(_x(tester, _above), 0);
+    expect(_opacity(tester, _above), 1);
 
     await _gesture(tester, 'commitBackGesture');
     await tester.pumpAndSettle();

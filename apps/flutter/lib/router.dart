@@ -317,10 +317,10 @@ List<RouteBase> _authRoutes({required bool tv}) => [
   ),
 ];
 
-/// A page a phone or tablet opens over another, from [builder]: it slides
+/// A page a phone or tablet opens over another, from [builder]: it comes
 /// in as the theme says, Cupertino's slide with the swipe back from the
-/// edge on iOS, and on Android the kit's, which covers the page below and
-/// uncovers it again.
+/// edge on iOS, and on Android the kit's, which fades it in over the page
+/// below and out again.
 ///
 /// Not left to go_router's `builder`: since 18 it picks the page by finding
 /// `material_ui`'s `MaterialApp`, doesn't see this app's, and gives every
@@ -377,8 +377,8 @@ Page<void> _fadePage(GoRouterState state, Widget child) =>
 
 /// The tabs, each with its own stack, and the pages that open over them. Pages
 /// open over the tabs, on the root navigator: a title page fills the screen
-/// without the bars. The tabs slide side by side ([HandsetTabs]), every one
-/// kept as it was left.
+/// without the bars. The tabs fade into each other ([HandsetTabs]), every
+/// one kept as it was left.
 List<RouteBase> _handsetRoutes() => [
   StatefulShellRoute(
     pageBuilder: (context, state, shell) =>

@@ -3,39 +3,22 @@ import 'package:flutter/widgets.dart';
 
 import 'motion.dart';
 
-/// How a page opens over another on Android, and goes again: it slides in
-/// from the end across the full width, and the page it covers moves a
-/// quarter of the width aside, without fading, so its art and colors stay
-/// as they were. Going back is the same motion played backwards, by the
-/// Back button or following Android's back gesture, where the finger moves
-/// it rather than the page shrinking. Each page has its own background, so
-/// they never show through each other. Both take [KitMotion.move] on
-/// [KitMotion.easing].
+/// How a page opens over another on Android, and goes again, as
+/// Findroid's do: it fades in over the page it covers, over [KitMotion.page]
+/// on [KitMotion.pageEasing], and going back fades it out the same way, by
+/// the Back button or following Android's back gesture, where the finger
+/// takes the fade back as far as it's gone. Nothing slides.
 ///
-/// The page below takes the motion from here too when it's another kind of
-/// page, as the tabs' shell is, through [delegatedTransition].
+/// The page underneath holds still and stays opaque, so only the page on top
+/// fades: the two dissolve into each other without dimming through the
+/// background on the way, and a frame of the fade composites one page's
+/// layer, not two. That needs every page to paint its own background, as
+/// the routes' pages do.
 class KitPageTransitionsBuilder extends PageTransitionsBuilder {
   const KitPageTransitionsBuilder();
 
   @override
-  Duration get transitionDuration => KitMotion.move;
-
-  @override
-  DelegatedTransitionBuilder? get delegatedTransition => _covered;
-
-  static Widget? _covered(
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-    bool allowSnapshotting,
-    Widget? child,
-  ) => child == null
-      ? null
-      : _PageMove(
-          animation: kAlwaysCompleteAnimation,
-          secondaryAnimation: secondaryAnimation,
-          child: child,
-        );
+  Duration get transitionDuration => KitMotion.page;
 
   @override
   Widget buildTransitions<T>(
@@ -46,11 +29,7 @@ class KitPageTransitionsBuilder extends PageTransitionsBuilder {
     Widget child,
   ) => _BackGesture(
     route: route,
-    child: _PageMove(
-      animation: animation,
-      secondaryAnimation: secondaryAnimation,
-      child: child,
-    ),
+    child: _PageFade(animation: animation, child: child),
   );
 }
 
@@ -143,55 +122,43 @@ class _BackGestureState extends State<_BackGesture>
   Widget build(BuildContext context) => widget.child;
 }
 
-/// A page offset by how far it's in, [animation], and how far the page over
-/// it is, [secondaryAnimation]. Its route rebuilds it on every frame of
-/// either. A translation only, with no layer of its own: the route already
-/// keeps the page behind a repaint boundary, so a frame moves it as it was.
-class _PageMove extends StatefulWidget {
-  const _PageMove({
-    required this.animation,
-    required this.secondaryAnimation,
-    required this.child,
-  });
+/// A page as opaque as it's in, [animation]. Its route rebuilds it on every
+/// frame of the fade; the route already keeps the page behind a repaint
+/// boundary, so a frame fades what it painted rather than paint it again.
+class _PageFade extends StatefulWidget {
+  const _PageFade({required this.animation, required this.child});
 
   final Animation<double> animation;
-  final Animation<double> secondaryAnimation;
   final Widget child;
 
   @override
-  State<_PageMove> createState() => _PageMoveState();
+  State<_PageFade> createState() => _PageFadeState();
 }
 
-class _PageMoveState extends State<_PageMove> {
+class _PageFadeState extends State<_PageFade> {
   late CurvedAnimation _shown = _curve(widget.animation);
-  late CurvedAnimation _covered = _curve(widget.secondaryAnimation);
 
-  /// Forward, [KitMotion.easing]; backward, the same played in reverse, so
-  /// going back sets off at once and lands softly too. A page sent back while
-  /// it still came in keeps its curve, as [CurvedAnimation] does.
+  /// Forward, [KitMotion.pageEasing]; backward, the same played in reverse,
+  /// so going back starts as gently as coming in. A page sent back while it
+  /// still came in keeps its curve, as [CurvedAnimation] does.
   static CurvedAnimation _curve(Animation<double> parent) => CurvedAnimation(
     parent: parent,
-    curve: KitMotion.easing,
-    reverseCurve: KitMotion.easing.flipped,
+    curve: KitMotion.pageEasing,
+    reverseCurve: KitMotion.pageEasing.flipped,
   );
 
   @override
-  void didUpdateWidget(_PageMove old) {
+  void didUpdateWidget(_PageFade old) {
     super.didUpdateWidget(old);
     if (widget.animation != old.animation) {
       _shown.dispose();
       _shown = _curve(widget.animation);
-    }
-    if (widget.secondaryAnimation != old.secondaryAnimation) {
-      _covered.dispose();
-      _covered = _curve(widget.secondaryAnimation);
     }
   }
 
   @override
   void dispose() {
     _shown.dispose();
-    _covered.dispose();
     super.dispose();
   }
 
@@ -202,14 +169,9 @@ class _PageMoveState extends State<_PageMove> {
     // so it takes the way back's curve, which [CurvedAnimation] wouldn't
     // pick for an animation set by hand.
     final gesture = Navigator.maybeOf(context)?.userGestureInProgress ?? false;
-    double eased(CurvedAnimation curve) => gesture
-        ? KitMotion.easing.flipped.transform(curve.parent.value)
-        : curve.value;
-    final end = Directionality.of(context) == TextDirection.rtl ? -1.0 : 1.0;
-    final x = (1 - eased(_shown)) - eased(_covered) / 4;
-    return FractionalTranslation(
-      translation: Offset(x * end, 0),
-      child: widget.child,
-    );
+    final opacity = gesture
+        ? KitMotion.pageEasing.flipped.transform(_shown.parent.value)
+        : _shown.value;
+    return Opacity(opacity: opacity, child: widget.child);
   }
 }

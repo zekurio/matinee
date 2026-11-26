@@ -21,7 +21,7 @@ class _Tab extends StatelessWidget {
   );
 }
 
-/// Three tabs in a shell route, as the app's, sliding in [TabSlide]. Back
+/// Three tabs in a shell route, as the app's, fading in [TabFade]. Back
 /// on a tab but the first goes to the first, as the app's shell does.
 Future<StatefulNavigationShell Function()> _tabs(
   WidgetTester tester, {
@@ -45,8 +45,11 @@ Future<StatefulNavigationShell Function()> _tabs(
             child: shell,
           );
         },
-        navigatorContainerBuilder: (context, shell, children) =>
-            TabSlide(index: shell.currentIndex, children: children),
+        navigatorContainerBuilder: (context, shell, children) => TabFade(
+          index: shell.currentIndex,
+          background: const Color(0xFF000000),
+          children: children,
+        ),
         branches: [
           for (final name in ['a', 'b', 'c'])
             StatefulShellBranch(
@@ -77,13 +80,41 @@ Future<StatefulNavigationShell Function()> _tabs(
 double _x(WidgetTester tester, String text) =>
     tester.getTopLeft(find.text(text)).dx;
 
+/// How opaque the tab with [text] is drawn.
+double _opacity(WidgetTester tester, String text) {
+  var opacity = 1.0;
+  final fades = find.ancestor(
+    of: find.text(text),
+    matching: find.byType(FadeTransition),
+  );
+  for (final fade in tester.widgetList<FadeTransition>(fades)) {
+    opacity *= fade.opacity.value;
+  }
+  return opacity;
+}
+
+/// Whether the tab with [text] paints over the tab with [other].
+bool _over(WidgetTester tester, String text, String other) {
+  final stack = find.byType(Stack).first;
+  int place(String of) => tester
+      .widget<Stack>(stack)
+      .children
+      .indexWhere(
+        (child) => find
+            .descendant(of: find.byWidget(child), matching: find.text(of))
+            .evaluate()
+            .isNotEmpty,
+      );
+  return place(text) > place(other);
+}
+
 Future<void> _at(WidgetTester tester, double fraction) =>
-    tester.pump(KitMotion.move * fraction);
+    tester.pump(KitMotion.page * fraction);
 
 void main() {
-  final half = KitMotion.easing.transform(.5);
+  final half = KitMotion.pageEasing.transform(.5);
 
-  testWidgets('a tab after the open one slides in from the end', (
+  testWidgets('a tab picked fades in over the open one, which holds still', (
     tester,
   ) async {
     final shell = await _tabs(tester);
@@ -91,15 +122,18 @@ void main() {
     await tester.pump();
     await _at(tester, .5);
 
-    expect(_x(tester, 'c 0'), moreOrLessEquals(_width * (1 - half)));
-    expect(_x(tester, 'a 0'), moreOrLessEquals(-_width * half));
+    expect(_opacity(tester, 'c 0'), moreOrLessEquals(half));
+    expect(_opacity(tester, 'a 0'), 1);
+    expect(_over(tester, 'c 0', 'a 0'), isTrue);
+    expect(_x(tester, 'c 0'), 0);
+    expect(_x(tester, 'a 0'), 0);
 
     await tester.pumpAndSettle();
-    expect(_x(tester, 'c 0'), 0);
+    expect(_opacity(tester, 'c 0'), 1);
     expect(find.text('a 0'), findsNothing);
   });
 
-  testWidgets('a tab before it slides in from the start', (tester) async {
+  testWidgets('a tab before it fades in over it the same', (tester) async {
     final shell = await _tabs(tester);
     shell().goBranch(2);
     await tester.pumpAndSettle();
@@ -107,11 +141,12 @@ void main() {
     await tester.pump();
     await _at(tester, .5);
 
-    expect(_x(tester, 'b 0'), moreOrLessEquals(-_width * (1 - half)));
-    expect(_x(tester, 'c 0'), moreOrLessEquals(_width * half));
+    expect(_opacity(tester, 'b 0'), moreOrLessEquals(half));
+    expect(_opacity(tester, 'c 0'), 1);
+    expect(_over(tester, 'b 0', 'c 0'), isTrue);
   });
 
-  testWidgets('Back from a tab to the first slides the same way', (
+  testWidgets('Back from a tab to the first fades the same way', (
     tester,
   ) async {
     final shell = await _tabs(tester);
@@ -122,8 +157,8 @@ void main() {
     await tester.pump();
     await _at(tester, .5);
 
-    expect(_x(tester, 'a 0'), moreOrLessEquals(-_width * (1 - half)));
-    expect(_x(tester, 'b 0'), moreOrLessEquals(_width * half));
+    expect(_opacity(tester, 'a 0'), moreOrLessEquals(half));
+    expect(_opacity(tester, 'b 0'), 1);
     await tester.pumpAndSettle();
     expect(shell().currentIndex, 0);
   });
@@ -153,7 +188,7 @@ void main() {
     shell().goBranch(1);
     await tester.pump();
 
-    expect(_x(tester, 'b 0'), 0);
+    expect(_opacity(tester, 'b 0'), 1);
     expect(find.text('a 0'), findsNothing);
   });
 }

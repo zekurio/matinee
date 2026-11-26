@@ -60,8 +60,7 @@ class MatineeTheme extends ThemeExtension<MatineeTheme> {
       splashFactory: NoSplash.splashFactory,
       // A page opening over another, named here rather than left to
       // Flutter's defaults, which have changed before: on Android the kit's
-      // cover and uncover, on iOS Cupertino's slide with the swipe back from
-      // the edge.
+      // fade, on iOS Cupertino's slide with the swipe back from the edge.
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: KitPageTransitionsBuilder(),

@@ -72,8 +72,8 @@ class ShellTopBar extends ConsumerWidget {
 /// The signed-in touch screens' frame, the same on a phone and a tablet:
 /// the tabs, [HandsetTabs], above the tab bar, Home, Media, Downloads, and
 /// Explore, each keeping its own stack. The bar stays while a tab's pages
-/// scroll and while tabs slide past it; a page opened from a tab covers
-/// them.
+/// scroll and while tabs fade into each other; a page opened from a tab
+/// covers them.
 class HandsetShell extends ConsumerStatefulWidget {
   const HandsetShell({super.key, required this.shell});
 
@@ -159,8 +159,8 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
 
 /// The tabs' pages, each under its own header, for [HandsetShell]: the
 /// shell route's container for its branches' navigators, in the tab bar's
-/// order. A tab picked slides in beside the last, its header with it, Back
-/// to Home too.
+/// order. A tab picked fades in over the last, its header with it, Back to
+/// Home too.
 class HandsetTabs extends StatelessWidget {
   const HandsetTabs({super.key, required this.shell, required this.children});
 
@@ -170,8 +170,9 @@ class HandsetTabs extends StatelessWidget {
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) => TabSlide(
+  Widget build(BuildContext context) => TabFade(
     index: shell.currentIndex,
+    background: MatineeTheme.of(context).background,
     children: [
       for (final (index, branch) in children.indexed)
         Column(
