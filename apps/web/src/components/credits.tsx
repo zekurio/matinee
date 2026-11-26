@@ -7,7 +7,7 @@ import { textLink } from "@/components/media-item"
 import { Picture, tone } from "@/components/picture"
 import { Rail } from "@/components/rail"
 import { perLocale, tr } from "@/i18n"
-import { art } from "@/lib/media"
+import { art, present } from "@/lib/media"
 
 const crewKinds = ["creator", "director", "writer"] satisfies CreditKind[]
 const maxNames = 3
@@ -129,17 +129,18 @@ export function CastRail(props: { credits: Credit[] }) {
                       tone(person().name),
                     ]}
                   >
-                    <span
-                      aria-hidden="true"
-                      class="text-muted-foreground font-medium"
-                    >
-                      {initials(person().name)}
-                    </span>
-                    <Show when={art(person().photo, "small")}>
-                      {(photo) => (
-                        <Picture sources={[photo()]} class="object-[50%_20%]" />
-                      )}
-                    </Show>
+                    <Picture
+                      sources={present(art(person().photo, "small"))}
+                      class="object-[50%_20%]"
+                      fallback={
+                        <span
+                          aria-hidden="true"
+                          class="text-muted-foreground font-medium"
+                        >
+                          {initials(person().name)}
+                        </span>
+                      }
+                    />
                   </span>
                   <figcaption class="mt-2.5 px-1">
                     <span class="line-clamp-2 text-sm font-medium text-balance">
@@ -162,8 +163,8 @@ export function CastRail(props: { credits: Credit[] }) {
 }
 
 /**
- * A round portrait, or the person's initials on their tone while it loads
- * or when there's none. `class` sets the size and the initials' type.
+ * A round portrait, or the person's initials on their tone when there's
+ * none or it fails to load. `class` sets the size and the initials' type.
  */
 export function PersonPortrait(props: {
   name: string
@@ -179,22 +180,20 @@ export function PersonPortrait(props: {
         props.class,
       )}
     >
-      <span
-        aria-hidden="true"
-        class="text-muted-foreground font-medium tracking-wide"
-      >
-        {initials(props.name)}
-      </span>
       {/* Headshots are portrait; keep the face, not the chest, in the circle. */}
-      <Show when={art(props.photo)}>
-        {(source) => (
-          <Picture
-            sources={[source()]}
-            eager={props.eager}
-            class="object-[50%_20%]"
-          />
-        )}
-      </Show>
+      <Picture
+        sources={present(art(props.photo))}
+        eager={props.eager}
+        class="object-[50%_20%]"
+        fallback={
+          <span
+            aria-hidden="true"
+            class="text-muted-foreground font-medium tracking-wide"
+          >
+            {initials(props.name)}
+          </span>
+        }
+      />
     </span>
   )
 }

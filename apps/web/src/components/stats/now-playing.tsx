@@ -23,7 +23,7 @@ import { Icon } from "@/kit/icon"
 import { Skeleton } from "@/kit/skeleton"
 import { formatSpan, formatWatchTime } from "@/lib/format"
 import { liveData, useLiveQuery } from "@/lib/live-query"
-import { art, channelLayout, itemLabel } from "@/lib/media"
+import { art, channelLayout, itemLabel, present } from "@/lib/media"
 import { errorMessage, liveQuery, orpc } from "@/lib/rpc"
 import {
   audioEncoderName,
@@ -338,10 +338,12 @@ function NowPlayingRow(props: {
           tone(item()?.title?.id ?? user().id),
         ]}
       >
-        <Icon icon={Film} class="text-muted-foreground/40 size-4" />
-        <Show when={facts().poster}>
-          {(poster) => <Picture sources={[poster()]} />}
-        </Show>
+        <Picture
+          sources={present(facts().poster)}
+          fallback={
+            <Icon icon={Film} class="text-muted-foreground/40 size-4" />
+          }
+        />
         <Show when={props.session.paused}>
           <span class="absolute inset-0 grid place-items-center bg-black/55">
             <Icon icon={Pause} fill="currentColor" class="size-5 text-white" />
