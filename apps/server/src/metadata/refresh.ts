@@ -5,6 +5,7 @@ import {
   type ExternalIds,
   library,
   type LibraryRow,
+  mediaItem,
   season,
   title,
   type TitleRow,
@@ -14,6 +15,7 @@ import { eq } from "drizzle-orm"
 import { db } from "../db"
 import { ShownError } from "../errors"
 import { defineQueue } from "../jobs/queue"
+import { reattachWatchState } from "../library/detached"
 import { localName } from "../library/titles"
 import { log } from "../log"
 import { queueArtwork, saveArtwork } from "../media/artwork"
@@ -366,6 +368,8 @@ async function refreshTitle(
   }
   const details = await source.details(id, lookup)
   await save(row, source.id, details, local.ids)
+  // Files that replaced others take back what users had on those.
+  await reattachWatchState(eq(mediaItem.titleId, row.id))
   libraryChanged(row.libraryId)
 }
 

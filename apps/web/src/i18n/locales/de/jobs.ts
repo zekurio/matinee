@@ -134,6 +134,10 @@ export default {
   "jobs.task.clean-sessions.name": "Abgelaufene Sitzungen löschen",
   "jobs.task.clean-sessions.description":
     "Entfernt abgelaufene Anmeldungen aus der Datenbank.",
+  "jobs.task.forget-detached-watch-state.name":
+    "Wiedergabestand entfernter Dateien vergessen",
+  "jobs.task.forget-detached-watch-state.description":
+    "Löscht, was Nutzer bei Dateien hatten, die vor 90 Tagen verschwunden und nicht zurückgekommen sind, etwa eine Veröffentlichung, die nicht ersetzt wurde.",
   "jobs.task.forget-browsed-pages.name": "Gefilterte Katalogseiten vergessen",
   "jobs.task.forget-browsed-pages.description":
     "Löscht Seiten des gefilterten Katalogs, die eine Woche lang niemand geöffnet hat.",

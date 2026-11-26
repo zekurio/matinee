@@ -167,6 +167,15 @@ The server warns, and raising `fs.inotify.max_user_watches` fixes it.
 A renamed or moved file keeps its progress and subtitles when one scan
 sees both paths with the same size and the same name or modification time.
 
+Watch progress, favorites, and plays also survive a file that goes for
+good, like a WEB-DL that Radarr or Sonarr upgrades to a Blu-ray. As in
+Jellyfin, they're kept by what the file was, its title's match and ids
+like TMDB and IMDb, plus the season and episode for a show, and a new
+file with one of those ids takes them back, whether it comes in the same
+scan, months later, or in another library. They wait 90 days, and a file
+whose title matched nothing keeps nothing. Picked audio and subtitle
+tracks don't carry over, since releases number their tracks differently.
+
 So that storage going away can't empty a library, a scan skips a library
 folder that's missing, unreadable, or suddenly empty, keeps everything
 under a folder it couldn't list, and deletes nothing if the server stops

@@ -32,6 +32,7 @@ import {
   visibleLibraries,
 } from "../access/visible"
 import { db } from "../db"
+import { detachWatchState } from "../library/detached"
 import { isScanning, scanLibrary } from "../library/scanner"
 import { watchLibraries } from "../library/watcher"
 import { placeholders, toArtwork } from "../media/artwork"
@@ -153,6 +154,15 @@ async function writeFolders(libraryId: string, input: LibraryInput) {
       .where(eq(libraryFolder.libraryId, libraryId))
     const removed = existing.filter((f) => !paths.includes(f.path))
     if (removed.length > 0) {
+      // ACCESS: the files of folders an admin is removing from a library
+      // they edit; what users had on them waits for the files to return.
+      await detachWatchState(
+        tx,
+        inArray(
+          mediaItem.folderId,
+          removed.map((f) => f.id),
+        ),
+      )
       await tx.delete(libraryFolder).where(
         inArray(
           libraryFolder.id,
@@ -249,10 +259,15 @@ export const libraries = {
     if (!(await libraryFor(context.user, input.id))) {
       throw notFound("Library not found.")
     }
-    const deleted = await db
-      .delete(library)
-      .where(eq(library.id, input.id))
-      .returning({ id: library.id })
+    const deleted = await db.transaction(async (tx) => {
+      // ACCESS: the files of the library checked above. What users had
+      // on them waits for the files to come back in another library.
+      await detachWatchState(tx, eq(mediaItem.libraryId, input.id))
+      return tx
+        .delete(library)
+        .where(eq(library.id, input.id))
+        .returning({ id: library.id })
+    })
     if (deleted.length === 0) throw notFound("Library not found.")
     // Groups that listed it don't anymore.
     forgetGroups()
