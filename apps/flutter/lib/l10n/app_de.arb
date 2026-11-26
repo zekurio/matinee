@@ -1895,5 +1895,8 @@
   "webConnectionsCardDefaultShow": "Standard für Serien",
   "webConnectionsCardReadOnly": "Sie schickt Titel in eine Mediathek, die du nicht sehen kannst. Du kannst sie ansehen und testen, aber nicht ändern.",
   "webConnectionsCardUnknownSource": "Unbekannte Quelle",
-  "webStatsFigurePeople": "{count, plural, one{Person} other{Personen}}"
+  "webStatsFigurePeople": "{count, plural, one{Person} other{Personen}}",
+  "webPeopleMore": "{count, plural, one{{count} weitere} other{{count} weitere}}",
+  "webTitleDetailsGenres": "{count, plural, one{Genre} other{Genres}}",
+  "webTitleDetailsReleased": "Erschienen"
 }

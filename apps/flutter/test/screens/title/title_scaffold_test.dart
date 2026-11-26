@@ -62,6 +62,65 @@ void main() {
     expect(find.text('section 0'), findsOneWidget);
   });
 
+  // The poster's column beside it on a tablet is one of the list's
+  // sections; built at once it would undo the turns.
+  testWidgets("a group's sections count one a frame, and keep their state", (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final group = SectionGroup(
+      sections: [
+        for (var i = 0; i < 3; i++)
+          SizedBox(height: 50, child: Text('grouped $i')),
+      ],
+      builder: (context, shown) => _Counted(children: shown),
+    );
+    Widget page(bool loaded) => testApp(
+      FadeSwitcher(
+        value: loaded,
+        child: loaded
+            ? TitleScaffold(sections: [group, ..._sections(2)])
+            : const Text('loading'),
+      ),
+    );
+    await tester.pumpWidget(page(false));
+    await tester.pumpWidget(page(true));
+    final built = <String>[];
+    for (var frame = 0; frame < 6; frame++) {
+      built.add(
+        [
+          for (var i = 0; i < 3; i++)
+            if (find
+                .text('grouped $i', skipOffstage: false)
+                .evaluate()
+                .isNotEmpty)
+              'g$i',
+          for (var i = 0; i < 2; i++)
+            if (find
+                .text('section $i', skipOffstage: false)
+                .evaluate()
+                .isNotEmpty)
+              's$i',
+        ].join(' '),
+      );
+      await tester.pump(const Duration(milliseconds: 8));
+    }
+    expect(built.take(5), [
+      'g0',
+      'g0 g1',
+      'g0 g1 g2',
+      'g0 g1 g2 s0',
+      'g0 g1 g2 s0 s1',
+    ], reason: '$built');
+    await tester.pumpAndSettle();
+    expect(find.text('loading'), findsNothing);
+    // The group's state lived through its sections coming in and the
+    // turns ending.
+    expect(_CountedState.created, 1);
+  });
+
   testWidgets('opening with its data, it builds at once', (tester) async {
     await tester.pumpWidget(
       testApp(
@@ -70,4 +129,27 @@ void main() {
     );
     expect(find.text('section 2'), findsOneWidget);
   });
+}
+
+/// A column that counts how many times its state was made.
+class _Counted extends StatefulWidget {
+  const _Counted({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  State<_Counted> createState() => _CountedState();
+}
+
+class _CountedState extends State<_Counted> {
+  static var created = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    created++;
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(children: widget.children);
 }
