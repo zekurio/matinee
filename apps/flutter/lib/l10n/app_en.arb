@@ -9876,5 +9876,14 @@
   "webConnectionsCardUnknownSource": "Unknown source",
   "@webConnectionsCardUnknownSource": {
     "description": "connections.card.unknownSource"
+  },
+  "webStatsFigurePeople": "{count, plural, one{Person} other{People}}",
+  "@webStatsFigurePeople": {
+    "description": "stats.figure.people",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

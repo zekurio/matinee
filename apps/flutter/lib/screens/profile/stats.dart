@@ -295,11 +295,13 @@ class _BarsPainter extends CustomPainter {
 }
 
 /// Plays and what was finished, a row each: an icon, what it counts, and
-/// the number at the end.
+/// the number at the end. The server's statistics lead with how many
+/// [people] watched, as the web's figures do.
 class StatList extends StatelessWidget {
-  const StatList({super.key, required this.totals});
+  const StatList({super.key, required this.totals, this.people});
 
   final WatchTotals totals;
+  final int? people;
 
   @override
   Widget build(BuildContext context) {
@@ -311,6 +313,8 @@ class StatList extends StatelessWidget {
     return Panel(
       rows: [
         for (final (icon, label, value) in [
+          if (people case final people?)
+            (Lucide.users, l.webStatsFigurePeople(people), people),
           (Lucide.playOutline, l.statsPlays, totals.plays),
           (Lucide.film, l.statsMoviesFinished, totals.movies),
           (Lucide.tv, l.statsEpisodesFinished, totals.episodes),

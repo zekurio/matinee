@@ -1897,5 +1897,6 @@
   "webConnectionsCardDefaultMovie": "Standard für Filme",
   "webConnectionsCardDefaultShow": "Standard für Serien",
   "webConnectionsCardReadOnly": "Sie schickt Titel in eine Mediathek, die du nicht sehen kannst. Du kannst sie ansehen und testen, aber nicht ändern.",
-  "webConnectionsCardUnknownSource": "Unbekannte Quelle"
+  "webConnectionsCardUnknownSource": "Unbekannte Quelle",
+  "webStatsFigurePeople": "{count, plural, one{Person} other{Personen}}"
 }

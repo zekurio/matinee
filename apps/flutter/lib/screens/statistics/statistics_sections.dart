@@ -17,7 +17,6 @@ import '../settings/settings_rows.dart' show Note;
 
 List<Widget> activitySections(BuildContext context, ServerStats stats) {
   final l = AppLocalizations.of(context);
-  final count = NumberFormat.decimalPattern(l.localeName);
   return [
     WatchTimeCard(
       range: stats.range,
@@ -25,15 +24,7 @@ List<Widget> activitySections(BuildContext context, ServerStats stats) {
       watchSeconds: stats.totals.watchSeconds,
       buckets: stats.buckets,
     ),
-    StatsCard(
-      children: [
-        _StatRow(
-          label: l.webStatsServerViewers,
-          value: count.format(stats.viewers),
-        ),
-      ],
-    ),
-    StatList(totals: stats.totals),
+    StatList(totals: stats.totals, people: stats.viewers),
     if (stats.titles.isNotEmpty) TopTitles(titles: stats.titles),
     if (stats.genres.isNotEmpty) Genres(genres: stats.genres),
     if (stats.users.isNotEmpty)
