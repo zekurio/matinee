@@ -42,6 +42,22 @@ function describe(bucket: LibraryGrowthBucket): string {
   return tr("stats.growth.heldAdded", { held, arrived: arrivals(bucket) })
 }
 
+/**
+ * The plot's scale. The libraries only grow by a little of what they
+ * hold in most ranges, so from zero the line would run flat along the
+ * top. The scale starts a step under the lowest count instead, unless
+ * that is near zero anyway.
+ */
+function scale(counts: number[]): { bottom: number; top: number } {
+  const max = Math.max(0, ...counts)
+  const min = Math.min(max, ...counts)
+  const fromZero = { bottom: 0, top: niceCeiling(max) }
+  const step = niceCeiling(Math.max(max - min, max / 50, 1) / 4)
+  const bottom = Math.max(0, (Math.floor(min / step) - 1) * step)
+  const top = (Math.floor(max / step) + 1) * step
+  return bottom < top / 4 ? fromZero : { bottom, top }
+}
+
 /** How far across the plot bucket `index` of `count` sits, in percent. */
 function xAt(index: number, count: number): number {
   return count <= 1 ? 50 : (index / (count - 1)) * 100
@@ -70,9 +86,7 @@ export function GrowthChart(props: {
   // Worked out once per answer; pointing moves only the marker and the caption.
   const chart = createMemo(() => {
     const buckets = props.buckets
-    const top = niceCeiling(
-      Math.max(0, ...buckets.map((bucket) => bucket.totalFiles)),
-    )
+    const { bottom, top } = scale(buckets.map((bucket) => bucket.totalFiles))
     const added = buckets.reduce(
       (sum, bucket) => ({
         movies: sum.movies + bucket.movies,
@@ -84,7 +98,7 @@ export function GrowthChart(props: {
     // `y` counts up from the baseline, in percent of the plot's height.
     const points = buckets.map((bucket, index) => ({
       x: xAt(index, buckets.length),
-      y: (bucket.totalFiles / top) * 100,
+      y: ((bucket.totalFiles - bottom) / (top - bottom)) * 100,
     }))
     const first = points[0]
     // A single bucket still gets a line, flat across the plot.
@@ -97,6 +111,7 @@ export function GrowthChart(props: {
         : points
     const segments = drawn.map((point) => `${point.x} ${100 - point.y}`)
     return {
+      bottom,
       top,
       summary: arrivals(added),
       points,
@@ -136,18 +151,21 @@ export function GrowthChart(props: {
         <span class="text-foreground font-medium">{caption().name}</span>
         {` · ${caption().text}`}
       </figcaption>
-      <div class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-2">
+      <div class="grid min-h-0 flex-1 grid-cols-[auto_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] gap-x-2 gap-y-2">
         <span
           aria-hidden="true"
-          class="text-muted-foreground text-11px -translate-y-1/2 self-start leading-none tabular-nums"
+          class="text-muted-foreground text-11px flex flex-col items-end justify-between leading-none tabular-nums"
         >
-          {formatCount(chart().top)}
+          <span class="-translate-y-1/2">{formatCount(chart().top)}</span>
+          <Show when={chart().bottom > 0}>
+            <span class="translate-y-1/2">{formatCount(chart().bottom)}</span>
+          </Show>
         </span>
         <div
           onPointerMove={pointAt}
           onPointerDown={pointAt}
           onPointerLeave={() => setActive(null)}
-          class="border-foreground/15 relative h-36 touch-pan-y border-b"
+          class="border-foreground/15 relative min-h-36 touch-pan-y border-b"
         >
           <span
             aria-hidden="true"

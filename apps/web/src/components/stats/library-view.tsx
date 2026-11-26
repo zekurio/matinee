@@ -36,7 +36,10 @@ import {
   StatFigures,
   StatsEmpty,
   StatsSection,
-  statsGrid,
+  statsAside,
+  StatsGrid,
+  statsOverview,
+  statsWide,
 } from "./stat-blocks"
 import { WatchStatsSkeleton } from "./watch-stats"
 
@@ -135,39 +138,51 @@ function LibrarySections(props: { stats: LibraryStats }) {
     [...props.stats.libraries].sort((a, b) => b.sizeBytes - a.sizeBytes)
   return (
     <div class="flex flex-col gap-4">
-      <StatFigures
-        figures={[
-          {
-            label: tr("stats.library.movies"),
-            value: formatCount(props.stats.totals.movies),
-            icon: Film,
-          },
-          {
-            label: tr("stats.library.shows"),
-            value: formatCount(props.stats.totals.shows),
-            icon: TvMinimal,
-          },
-          {
-            label: tr("stats.library.episodes"),
-            value: formatCount(props.stats.totals.episodes),
-            icon: TvMinimalPlay,
-          },
-          {
-            label: tr("stats.library.size"),
-            value: formatBytes(props.stats.totals.sizeBytes),
-            icon: HardDrive,
-          },
-          {
-            label: tr("stats.library.runningTime"),
-            value: formatWatchTime(props.stats.totals.durationSeconds),
-            icon: Clock,
-          },
-        ]}
-      />
-      <StatsSection title={addedTitle(props.stats.range)}>
-        <GrowthChart buckets={props.stats.growth} unit={props.stats.unit} />
-      </StatsSection>
-      <div class={statsGrid}>
+      {/* The growth chart beside the figures, as the activity view has
+          its watch time beside its figures. Under a title as the chart
+          is, the figures come out as tall as it, so no gap is left under
+          them. */}
+      <div class={statsOverview}>
+        <StatsSection title={addedTitle(props.stats.range)} class={statsWide}>
+          <GrowthChart
+            buckets={props.stats.growth}
+            unit={props.stats.unit}
+            class="flex-1"
+          />
+        </StatsSection>
+        <StatFigures
+          title={tr("stats.library.totals")}
+          class={statsAside}
+          figures={[
+            {
+              label: tr("stats.library.movies"),
+              value: formatCount(props.stats.totals.movies),
+              icon: Film,
+            },
+            {
+              label: tr("stats.library.shows"),
+              value: formatCount(props.stats.totals.shows),
+              icon: TvMinimal,
+            },
+            {
+              label: tr("stats.library.episodes"),
+              value: formatCount(props.stats.totals.episodes),
+              icon: TvMinimalPlay,
+            },
+            {
+              label: tr("stats.library.size"),
+              value: formatBytes(props.stats.totals.sizeBytes),
+              icon: HardDrive,
+            },
+            {
+              label: tr("stats.library.runningTime"),
+              value: formatWatchTime(props.stats.totals.durationSeconds),
+              icon: Clock,
+            },
+          ]}
+        />
+      </div>
+      <StatsGrid>
         <StatsSection title={tr("stats.library.libraries")}>
           <RankedBars
             rows={libraries().map((library) => ({
@@ -215,7 +230,7 @@ function LibrarySections(props: { stats: LibraryStats }) {
             codec === "unknown" ? tr("stats.notRead") : audioFormatName(codec)
           }
         />
-      </div>
+      </StatsGrid>
     </div>
   )
 }
