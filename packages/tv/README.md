@@ -24,6 +24,10 @@ facts, the device platform, the app version, and the server a web page
 should start on. Everything else is shared, so a screen changed here
 changes in both entries.
 
+The Flutter app's TV screens are the other TV UI. This package began as
+their port and has fewer of them. Neither is the reference yet, so a TV
+change goes to both (see Clients in the root `AGENTS.md`).
+
 ## Strings
 
 `src/i18n/shared.gen.ts` is generated from the Flutter app's ARB files for

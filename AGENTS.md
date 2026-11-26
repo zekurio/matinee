@@ -31,9 +31,10 @@ TV app.
   streams (`src/realtime`), watch parties, which live in memory
   (`src/party`).
 - `apps/server/src/access`: account policies, viewers, and the shared library visibility filters.
-- `apps/web`: the web app, on Solid 2.0, ui-sdk, and Vite, with a desktop
-  layout that follows the Flutter app. Its components live in `src/kit`,
-  file routes in `src/routes`, and `src/routeTree.gen.ts` is generated.
+- `apps/web`: the web app, on Solid 2.0, ui-sdk, and Vite, and the
+  reference client the others port (see Clients below). Its components
+  live in `src/kit`, file routes in `src/routes`, and
+  `src/routeTree.gen.ts` is generated.
   Its `/tv/` document serves the shared TV UI below. See its README
   before writing Solid code.
 - `brand/`: the logo, the wordmark, and the app icons, with the
@@ -138,6 +139,18 @@ TV app.
   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and
   `ANDROID_KEY_PASSWORD`. Android only installs updates signed with the
   same key, so never rotate or regenerate the keystore.
+
+## Clients
+
+- The web app is the reference for how a screen looks and behaves, at
+  desktop and phone width. A UI change starts there.
+- The Flutter app ports the change in the same branch. If it doesn't, the
+  PR description says what wasn't ported.
+- A client differs from the web app only where its platform needs it, like
+  touch, a remote, or the native player, or where its README says so.
+- TV has no reference yet. `packages/tv` began as a port of the Flutter
+  app's TV screens and has fewer of them. A TV change goes to both in the
+  same branch, or the PR description says which one it left out.
 
 ## Web app
 

@@ -4,6 +4,11 @@ One Flutter app for Android phones, tablets, and TVs, for iPhone and iPad,
 and for Apple TV. Screens are Flutter. Video plays in each platform's
 native player, which sits behind the Flutter view.
 
+The web app is the reference for the phone and tablet screens. A change
+to one starts there and gets ported here, as Clients in the root
+`AGENTS.md` says. The TV screens have no reference yet, and a change to
+them goes to `packages/tv` as well.
+
 Android phones and tablets have every screen, downloads, and offline mode.
 Android TV has its own routes and player. iPhone and iPad have the same
 screens as Android phones and tablets, with the native side in
