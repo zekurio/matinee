@@ -74,10 +74,11 @@ export function PartyDialog(props: {
 }) {
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      {/* The dialog mounts its content when it opens and unmounts it once
+          its exit has played, so the panel starts fresh each time and
+          stays in the card while the card fades out. */}
       <DialogContent class="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-md">
-        <Show when={props.open}>
-          <PartyPanel onClose={() => props.onOpenChange(false)} />
-        </Show>
+        <PartyPanel onClose={() => props.onOpenChange(false)} />
       </DialogContent>
     </Dialog>
   )

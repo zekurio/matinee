@@ -20,7 +20,7 @@ import { errorMessage, orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
 import { browserTimeZone, rangePhrase } from "@/lib/stats"
 
-import { StatsEmpty, StatsSection, statsGrid } from "./stat-blocks"
+import { StatsEmpty, StatsSection, StatsGrid } from "./stat-blocks"
 import { WatchStatsSkeleton } from "./watch-stats"
 
 const TIME_ZONE = browserTimeZone()
@@ -143,11 +143,11 @@ function Boards(props: {
             </span>
           </p>
         </Show>
-        <div class={statsGrid}>
+        <StatsGrid>
           <For each={props.result.boards} keyed={(entry) => entry.metric}>
             {(entry) => <Board board={entry()} />}
           </For>
-        </div>
+        </StatsGrid>
       </div>
     </Show>
   )

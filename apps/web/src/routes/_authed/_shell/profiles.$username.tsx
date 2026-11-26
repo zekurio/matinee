@@ -37,7 +37,7 @@ import {
   PrivateNote,
   SectionHeading,
   StatsEmpty,
-  statsGrid,
+  StatsGrid,
 } from "@/components/stats/stat-blocks"
 import {
   GenresSection,
@@ -560,20 +560,17 @@ function Statistics(props: { profile: Profile }) {
             >
               <div class="flex flex-col gap-4 pt-1">
                 <WatchOverview stats={data()} figures={watchFigures(data())} />
-                <div class={statsGrid}>
+                <StatsGrid>
                   <TopTitlesSection stats={data()} />
                   <GenresSection stats={data()} />
-                  {/* The third column: where you stand among the people
-                      sharing their statistics, only on your own profile
-                      since the board is the viewer's, and when in the week
-                      the watching happens. */}
-                  <div class="flex flex-col gap-4">
-                    <Show when={props.profile.self}>
-                      <StandingSection range={range()} />
-                    </Show>
-                    <ActivitySection stats={data()} />
-                  </div>
-                </div>
+                  {/* Where you stand among the people sharing their
+                      statistics, only on your own profile since the board
+                      is the viewer's. */}
+                  <Show when={props.profile.self}>
+                    <StandingSection range={range()} />
+                  </Show>
+                  <ActivitySection stats={data()} />
+                </StatsGrid>
               </div>
             </Show>
           )}

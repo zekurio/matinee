@@ -113,6 +113,7 @@ export default {
   "stats.library.added.90d": "In den letzten 90 Tagen hinzugefügt",
   "stats.library.added.365d": "Im letzten Jahr hinzugefügt",
   "stats.library.added.all": "Hinzugefügt im Lauf der Zeit",
+  "stats.library.totals": "Gesamtbestand",
   "stats.library.movies": "Filme",
   "stats.library.shows": "Serien",
   "stats.library.episodes": "Folgen",

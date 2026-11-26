@@ -13,7 +13,7 @@ import { browserTimeZone, rangePhrase } from "@/lib/stats"
 import { WatchingNow } from "./now-playing"
 import { Clients, Methods, TranscodingSections, Viewers } from "./server-panels"
 import { ActivitySection } from "./standing"
-import { StatsEmpty, statsGrid } from "./stat-blocks"
+import { StatsEmpty, StatsGrid } from "./stat-blocks"
 import {
   GenresSection,
   hasPlays,
@@ -108,14 +108,12 @@ export function ActivityView(props: RangeProps) {
                 ...watchFigures(stats()),
               ]}
             />
-            <div class={statsGrid}>
+            <StatsGrid>
               <TopTitlesSection stats={stats()} />
               <GenresSection stats={stats()} />
-              <div class="flex flex-col gap-4">
-                <Viewers stats={stats()} />
-                <ActivitySection stats={stats()} />
-              </div>
-            </div>
+              <Viewers stats={stats()} />
+              <ActivitySection stats={stats()} />
+            </StatsGrid>
           </div>
         )}
       </WithServerStats>
@@ -128,7 +126,7 @@ export function PlaybackView(props: RangeProps) {
   return (
     <WithServerStats range={props.range} onRange={props.onRange}>
       {(stats) => (
-        <div class={statsGrid}>
+        <StatsGrid>
           <Methods methods={stats().methods} />
           <Clients stats={stats()} />
           <Show
@@ -144,7 +142,7 @@ export function PlaybackView(props: RangeProps) {
           >
             <TranscodingSections stats={stats()} />
           </Show>
-        </div>
+        </StatsGrid>
       )}
     </WithServerStats>
   )

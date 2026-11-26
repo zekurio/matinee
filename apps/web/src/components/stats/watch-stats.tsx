@@ -16,8 +16,11 @@ import {
   type StatFigure,
   StatFigures,
   StatsSection,
+  statsAside,
   statsCard,
+  statsOverview,
   statsRows,
+  statsWide,
 } from "./stat-blocks"
 import { WatchChart } from "./watch-chart"
 
@@ -75,11 +78,9 @@ export function WatchOverview(props: {
       : `${tr("stats.figure.watchTime")} · ${rangeName(props.stats.range)}`
   }
   return (
-    // The page's grid of cards: the card two columns wide, the figures in
-    // the third, so both line up with the cards below.
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div class={statsOverview}>
       <section
-        class={cn(statsCard, "flex min-w-0 flex-col gap-4 p-4 md:col-span-2")}
+        class={cn(statsCard, statsWide, "flex min-w-0 flex-col gap-4 p-4")}
       >
         <div>
           <p class="text-muted-foreground text-sm leading-6">{heading()}</p>
@@ -97,10 +98,7 @@ export function WatchOverview(props: {
           class="min-h-36 flex-1 xl:min-h-20"
         />
       </section>
-      <StatFigures
-        figures={props.figures}
-        class="md:col-span-2 xl:col-span-1"
-      />
+      <StatFigures figures={props.figures} class={statsAside} />
     </div>
   )
 }
@@ -120,12 +118,12 @@ export function TopTitlesSection(props: { stats: WatchStats }) {
                 <Link
                   to="/titles/$titleId"
                   params={{ titleId: entry().title.id }}
-                  class="hover:bg-foreground/[0.04] focus-visible:ring-ring flex items-center gap-3.5 px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-inset"
+                  class="hover:bg-foreground/[0.04] focus-visible:ring-ring flex items-center gap-3 px-4 py-2 outline-none focus-visible:ring-2 focus-visible:ring-inset"
                 >
                   {/* The first three stand out, as on the apps. */}
                   <span
                     class={[
-                      "w-6 shrink-0 text-base font-semibold tabular-nums",
+                      "w-5 shrink-0 text-sm font-semibold tabular-nums",
                       index() < 3 ? "text-foreground" : "text-muted-foreground",
                     ]}
                   >
@@ -133,7 +131,7 @@ export function TopTitlesSection(props: { stats: WatchStats }) {
                   </span>
                   <span
                     class={[
-                      "relative aspect-[2/3] w-10 shrink-0 overflow-hidden rounded-[4px] border",
+                      "relative aspect-[2/3] w-7 shrink-0 overflow-hidden rounded-[4px] border",
                       tone(entry().title.id),
                     ]}
                   >

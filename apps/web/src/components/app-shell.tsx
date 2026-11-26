@@ -26,13 +26,18 @@ import { Icon, type IconNode } from "@/kit/icon"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/kit/tooltip"
 import { useHistorySteps } from "@/lib/history-steps"
 import { usePartyRole } from "@/lib/party"
-import { useOpenSettings } from "@/lib/settings"
+import { useOpenSettings, useSettingsLocation } from "@/lib/settings"
 import { useSignOut } from "@/lib/sign-out"
 import { isPhone } from "@/lib/viewport"
 import { focusSearch, resetSearch } from "@/stores/search"
 
 import { Logo, LogoMark } from "./brand"
-import { DestinationLink, useDestinations } from "./destinations"
+import {
+  DestinationFace,
+  DestinationLink,
+  destinationLink,
+  useDestinations,
+} from "./destinations"
 import { PageScrollbar } from "./page-scrollbar"
 import { PartyDialog } from "./party/party-panel"
 import {
@@ -71,13 +76,15 @@ export { libraryIcons } from "./destinations"
 /** The rail's width, which the bar and the page start after. */
 const RAIL = "w-16"
 
+const railItem = "relative w-full py-1.5"
+
 /**
- * The rail: the destinations under the logo's cell. Solid, with a hairline
- * on its page side, as the Flutter tab bar has one on its top.
+ * The rail: the destinations under the logo's cell, and Settings at its
+ * foot, as the TV's drawer has them. Solid, with a hairline on its page
+ * side, as the Flutter tab bar has one on its top.
  */
 function NavRail() {
   const destinations = useDestinations()
-  const railItem = "relative w-full py-1.5"
   return (
     <nav
       aria-label={tr("shell.mainNav")}
@@ -95,7 +102,37 @@ function NavRail() {
           )}
         </For>
       </ul>
+      <RailSettings />
     </nav>
+  )
+}
+
+/**
+ * Settings at the rail's foot, open over the page as the account menu
+ * opened it, and in the accent while it's open.
+ */
+function RailSettings() {
+  const openSettings = useOpenSettings()
+  const settings = useSettingsLocation()
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        aria-label={tr("shell.settings")}
+        data-status={settings.target() === null ? undefined : "active"}
+        onClick={() => openSettings()}
+        onPointerDown={(event) => {
+          if (event.currentTarget.matches(":focus-visible")) {
+            event.currentTarget.blur()
+          }
+        }}
+        class={cn(destinationLink, railItem, "mt-auto")}
+      >
+        <DestinationFace icon={Settings} label={tr("shell.settings")} rail />
+      </TooltipTrigger>
+      <TooltipContent side="right" sideOffset={8}>
+        {tr("shell.settings")}
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -231,12 +268,12 @@ function AccountName(props: { user: User }) {
 
 /**
  * The avatar at the bar's end, and the account's menu from it: the
- * profile, the watch party, statistics, settings, and signing out.
+ * profile, the watch party, statistics, and signing out. Settings is on
+ * the rail.
  */
 function AccountMenu(props: { user: User; class?: string }) {
   const signOut = useSignOut()
   const navigate = useNavigate()
-  const openSettings = useOpenSettings()
   const name = () => props.user.displayName ?? props.user.username
   const role = usePartyRole()
   const [partyOpen, setPartyOpen] = createSignal(false)
@@ -306,9 +343,6 @@ function AccountMenu(props: { user: User; class?: string }) {
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => void navigate({ to: "/stats" })}>
             {item(ChartColumn, tr("shell.statistics"))}
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => openSettings()}>
-            {item(Settings, tr("shell.settings"))}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem

@@ -126,6 +126,7 @@ export default defineMessages("stats", {
   "stats.library.added.90d": "Added in the last 90 days",
   "stats.library.added.365d": "Added in the last year",
   "stats.library.added.all": "Added over time",
+  "stats.library.totals": "Totals",
   "stats.library.movies": "Movies",
   "stats.library.shows": "Shows",
   "stats.library.episodes": "Episodes",
