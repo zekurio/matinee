@@ -5,9 +5,9 @@ import 'package:flutter/widgets.dart';
 /// curve from here, through [of] where the system can ask for less motion.
 ///
 /// Pages that open over others move as the theme says: on Android they
-/// cover and uncover (`page_motion.dart`), on iOS they take
-/// Cupertino's slide. What changes in place, a tab for another, a spinner
-/// for what it waited on, a placeholder for its picture, fades.
+/// cover and uncover (`page_motion.dart`), on iOS they take Cupertino's
+/// slide. Tabs slide side by side ([TabSlide]). What changes in place, a
+/// spinner for what it waited on, a placeholder for its picture, fades.
 abstract final class KitMotion {
   /// The web's cubic-bezier(0.22, 1, 0.36, 1): off at once, then a long,
   /// soft landing. For what arrives or moves.
@@ -61,50 +61,109 @@ class FadeSwitcher extends StatelessWidget {
   }
 }
 
-/// Fades [child] in from nothing whenever [value] changes, the last of it
-/// gone at once: a tab taking the place of another. Its first build shows
-/// without a fade.
-class FadeOnChange extends StatefulWidget {
-  const FadeOnChange({super.key, required this.value, required this.child});
+/// Tabs side by side in [children]'s order, [index] the one in view.
+/// When [index] changes, the tab picked slides in from the side it sits on
+/// and the one left slides off the other way, both across the full width,
+/// over [KitMotion.move] on [KitMotion.easing]. What's around it, like a
+/// tab bar, holds still. Every tab stays built, offstage while out of
+/// view, so each keeps its state and scroll position, and only the one in
+/// view ticks. Its first build shows without a slide.
+class TabSlide extends StatefulWidget {
+  const TabSlide({super.key, required this.index, required this.children});
 
-  final Object? value;
-  final Widget child;
+  final int index;
+  final List<Widget> children;
 
   @override
-  State<FadeOnChange> createState() => _FadeOnChangeState();
+  State<TabSlide> createState() => _TabSlideState();
 }
 
-class _FadeOnChangeState extends State<FadeOnChange>
+class _TabSlideState extends State<TabSlide>
     with SingleTickerProviderStateMixin {
   late final _controller = AnimationController(
     vsync: this,
-    duration: KitMotion.enter,
+    duration: KitMotion.move,
     value: 1,
-  );
-  late final _opacity = CurvedAnimation(
+  )..addStatusListener(_settled);
+  late final _progress = CurvedAnimation(
     parent: _controller,
     curve: KitMotion.easing,
   );
 
+  /// The tab sliding away, while one slides in.
+  int? _left;
+
+  void _settled(AnimationStatus status) {
+    if (status.isCompleted && _left != null) setState(() => _left = null);
+  }
+
   @override
-  void didUpdateWidget(FadeOnChange old) {
+  void didUpdateWidget(TabSlide old) {
     super.didUpdateWidget(old);
-    if (widget.value == old.value) return;
+    if (widget.index == old.index) return;
     if (MediaQuery.disableAnimationsOf(context)) {
+      _left = null;
       _controller.value = 1;
     } else {
+      _left = old.index;
       _controller.forward(from: 0);
     }
   }
 
   @override
   void dispose() {
-    _opacity.dispose();
+    _progress.dispose();
     _controller.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) =>
-      FadeTransition(opacity: _opacity, child: widget.child);
+  Widget build(BuildContext context) {
+    final end = Directionality.of(context) == TextDirection.rtl ? -1.0 : 1.0;
+    return AnimatedBuilder(
+      animation: _progress,
+      builder: (context, _) {
+        final left = _left;
+        final step = left == null || widget.index > left ? end : -end;
+        final t = _progress.value;
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            for (final (i, child) in widget.children.indexed)
+              _tab(
+                child,
+                shown: i == widget.index,
+                leaving: i == left,
+                x: i == widget.index ? (1 - t) * step : -t * step,
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// One tab, built the same way whatever it's doing, so none loses its
+  /// state as it comes and goes. Its own repaint boundary lets a frame of
+  /// the slide move what it painted rather than paint it again.
+  Widget _tab(
+    Widget child, {
+    required bool shown,
+    required bool leaving,
+    required double x,
+  }) => Offstage(
+    offstage: !shown && !leaving,
+    child: TickerMode(
+      enabled: shown,
+      child: IgnorePointer(
+        ignoring: !shown,
+        child: ExcludeSemantics(
+          excluding: !shown,
+          child: FractionalTranslation(
+            translation: Offset(shown || leaving ? x : 0, 0),
+            child: RepaintBoundary(child: child),
+          ),
+        ),
+      ),
+    ),
+  );
 }

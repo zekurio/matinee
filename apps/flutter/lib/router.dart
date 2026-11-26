@@ -377,11 +377,14 @@ Page<void> _fadePage(GoRouterState state, Widget child) =>
 
 /// The tabs, each with its own stack, and the pages that open over them. Pages
 /// open over the tabs, on the root navigator: a title page fills the screen
-/// without the bars.
+/// without the bars. The tabs slide side by side ([HandsetTabs]), every one
+/// kept as it was left.
 List<RouteBase> _handsetRoutes() => [
-  StatefulShellRoute.indexedStack(
+  StatefulShellRoute(
     pageBuilder: (context, state, shell) =>
         _fadePage(state, HandsetShell(shell: shell)),
+    navigatorContainerBuilder: (context, shell, children) =>
+        HandsetTabs(shell: shell, children: children),
     branches: [
       StatefulShellBranch(
         routes: [

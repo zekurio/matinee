@@ -70,9 +70,10 @@ class ShellTopBar extends ConsumerWidget {
 }
 
 /// The signed-in touch screens' frame, the same on a phone and a tablet:
-/// the header on top, and the tabs along the bottom, Home, Media, Downloads,
-/// and Explore, each keeping its own stack. Both stay while a tab's pages
-/// scroll; a page opened from a tab covers them.
+/// the tabs, [HandsetTabs], above the tab bar, Home, Media, Downloads, and
+/// Explore, each keeping its own stack. The bar stays while a tab's pages
+/// scroll and while tabs slide past it; a page opened from a tab covers
+/// them.
 class HandsetShell extends ConsumerStatefulWidget {
   const HandsetShell({super.key, required this.shell});
 
@@ -147,41 +148,49 @@ class _HandsetShellState extends ConsumerState<HandsetShell> {
         color: MatineeTheme.of(context).background,
         child: Column(
           children: [
-            // A tab fades in over the last, its header with it, while the
-            // tab bar stays put.
-            Expanded(
-              child: FadeOnChange(
-                value: widget.shell.currentIndex,
-                child: Column(
-                  children: [
-                    ShellTopBar(index: widget.shell.currentIndex),
-                    Expanded(
-                      child: MediaQuery.removePadding(
-                        context: context,
-                        // Media's header is inside the tab, which keeps the
-                        // status bar's inset to clear it, as [ShellTopBar]
-                        // does.
-                        removeTop: !_serverTabs.contains(
-                          widget.shell.currentIndex,
-                        ),
-                        removeBottom: true,
-                        // Clear of a landscape phone's notch or Dynamic
-                        // Island, as the header and the tab bar are.
-                        child: SafeArea(
-                          top: false,
-                          bottom: false,
-                          child: widget.shell,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            Expanded(child: widget.shell),
             TabBar(items: items, state: _selected, onSelected: _open),
           ],
         ),
       ),
     );
   }
+}
+
+/// The tabs' pages, each under its own header, for [HandsetShell]: the
+/// shell route's container for its branches' navigators, in the tab bar's
+/// order. A tab picked slides in beside the last, its header with it, Back
+/// to Home too.
+class HandsetTabs extends StatelessWidget {
+  const HandsetTabs({super.key, required this.shell, required this.children});
+
+  final StatefulNavigationShell shell;
+
+  /// The branches' navigators, by branch index.
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => TabSlide(
+    index: shell.currentIndex,
+    children: [
+      for (final (index, branch) in children.indexed)
+        Column(
+          children: [
+            ShellTopBar(index: index),
+            Expanded(
+              child: MediaQuery.removePadding(
+                context: context,
+                // Media's header is inside the tab, which keeps the status
+                // bar's inset to clear it, as [ShellTopBar] does.
+                removeTop: !_serverTabs.contains(index),
+                removeBottom: true,
+                // Clear of a landscape phone's notch or Dynamic Island, as
+                // the header and the tab bar are.
+                child: SafeArea(top: false, bottom: false, child: branch),
+              ),
+            ),
+          ],
+        ),
+    ],
+  );
 }
