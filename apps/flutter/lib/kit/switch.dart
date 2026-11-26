@@ -65,6 +65,7 @@ class SwitchTrack extends StatelessWidget {
       opacity: enabled ? 1 : .5,
       child: AnimatedContainer(
         duration: motion,
+        curve: KitMotion.easing,
         width: size.width,
         height: size.height,
         decoration: BoxDecoration(
@@ -74,6 +75,7 @@ class SwitchTrack extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: AnimatedAlign(
           duration: motion,
+          curve: KitMotion.easing,
           alignment: checked
               ? AlignmentDirectional.centerEnd
               : AlignmentDirectional.centerStart,

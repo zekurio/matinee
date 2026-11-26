@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'icon.dart';
+import 'motion.dart';
 import 'press_indication.dart';
 import 'theme.dart';
 
@@ -25,7 +26,7 @@ class Checkbox extends StatelessWidget {
         child: SizedBox.square(
           dimension: 38,
           child: Center(
-            child: Container(
+            child: PressFill(
               width: 18,
               height: 18,
               decoration: BoxDecoration(
@@ -36,14 +37,18 @@ class Checkbox extends StatelessWidget {
                 ),
               ),
               alignment: Alignment.center,
-              child: checked
-                  ? KitIcon(
-                      Lucide.check,
-                      size: 14,
-                      color: colors.accentForeground,
-                      strokeWidth: 3,
-                    )
-                  : null,
+              // The tick grows in as the box fills, and shrinks away.
+              child: AnimatedScale(
+                scale: checked ? 1 : 0,
+                duration: KitMotion.of(context, KitMotion.enter),
+                curve: KitMotion.easing,
+                child: KitIcon(
+                  Lucide.check,
+                  size: 14,
+                  color: colors.accentForeground,
+                  strokeWidth: 3,
+                ),
+              ),
             ),
           ),
         ),
