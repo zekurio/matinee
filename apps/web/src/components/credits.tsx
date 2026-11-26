@@ -9,9 +9,13 @@ import { Rail } from "@/components/rail"
 import { perLocale, tr } from "@/i18n"
 import { art } from "@/lib/media"
 
-const crewKinds = ["creator", "director", "writer"] satisfies CreditKind[]
+export const crewKinds = [
+  "creator",
+  "director",
+  "writer",
+] satisfies CreditKind[]
 const maxNames = 3
-const conjunctionList = perLocale(
+export const conjunctionList = perLocale(
   (locale) => new Intl.ListFormat(locale, { type: "conjunction" }),
 )
 export const unitList = perLocale(
@@ -77,7 +81,8 @@ export function CrewFacts(props: {
   )
 }
 
-function CrewNames(props: { names: string[] }) {
+/** Up to three names as links to their people, and how many more. */
+export function CrewNames(props: { names: string[] }) {
   const parts = createMemo(() => {
     const count = props.names.length
     const shown = props.names.slice(0, maxNames)

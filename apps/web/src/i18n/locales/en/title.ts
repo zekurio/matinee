@@ -25,6 +25,9 @@ export default defineMessages("title", {
 
   // title-header.tsx: the facts under the name.
   "title.rating": "Rated {rating}",
+  // title-header.tsx: the labels in the table of details.
+  "title.details.genres": plural({ one: "Genre", other: "Genres" }),
+  "title.details.released": "Released",
   // title-header.tsx: the button beside Play, which opens YouTube.
   "title.trailer": "Trailer",
   "title.trailerHint": "Watch the trailer on YouTube",
