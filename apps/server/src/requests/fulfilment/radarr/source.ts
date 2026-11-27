@@ -1,7 +1,7 @@
 import { t } from "@matinee/contracts/schema"
 import { ORPCError } from "@orpc/server"
 
-import { call, list } from "../arr/client"
+import { call, list, remember } from "../arr/client"
 import {
   destination,
   field,
@@ -45,6 +45,10 @@ const title = t.object({
     .array(t.object({ seasonNumber: t.number(), monitored: t.boolean() }))
     .optional(),
 })
+
+/** How long a progress poll goes on a film's record before reading it again. */
+const RECORD_MS = 5 * 60_000
+const titleRecords = remember<t.infer<typeof title> | null>(RECORD_MS)
 
 const queue = t.object({
   totalRecords: t.number(),
@@ -214,19 +218,14 @@ export const adapter = {
   },
   link: (connection, ref) => link(connection, ref, "movie"),
   async progress(connection, sent) {
-    const records = await queueRecords(connection)
+    const queued = await queueRecords(connection)
     return Promise.all(
       sent.map(async (item) => {
         const id = t.object({ id: t.number() }).parse(item.ref).id
-        const current = await call(
-          connection,
-          `movie/${id}`,
-          title,
-          "GET",
-          undefined,
-          true,
+        const current = await titleRecords(connection, `movie/${id}`, () =>
+          call(connection, `movie/${id}`, title, "GET", undefined, true),
         )
-        const active = records.filter((value) => value.movieId === id)
+        const active = queued.filter((value) => value.movieId === id)
         const size = active.reduce((sum, value) => sum + value.size, 0)
         const remaining = active.reduce((sum, value) => sum + value.sizeleft, 0)
         const eta = active

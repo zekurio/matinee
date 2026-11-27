@@ -1,0 +1,1 @@
+ALTER TABLE "user_title_signal" ADD COLUMN "name" text;

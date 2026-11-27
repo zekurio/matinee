@@ -39,6 +39,7 @@ final serverMessages = <ServerMessage>[
   ServerMessage("This request isn't available.", [], (l, values, count) => l.webServerRequestsMissing),
   ServerMessage('Choose seasons listed for this show.', [], (l, values, count) => l.webServerRequestsSeasons),
   ServerMessage("You can't request this title right now.", [], (l, values, count) => l.webServerRequestsNotNow),
+  ServerMessage("This film is already here, so there's nothing to request.", [], (l, values, count) => l.webServerRequestsFilmHere),
   ServerMessage("This title was declined, so it can't be requested until an admin allows it again.", [], (l, values, count) => l.webServerRequestsDeclined),
   ServerMessage('Only a waiting request can be declined. Give up on an accepted one instead.', [], (l, values, count) => l.webServerRequestsDeclineWaiting),
   ServerMessage("Only an accepted request that hasn't arrived can be given up.", [], (l, values, count) => l.webServerRequestsGiveUpAccepted),

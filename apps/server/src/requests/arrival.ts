@@ -1,5 +1,5 @@
 import { mediaItem, request, requestSeason, title } from "@matinee/db"
-import { and, eq, isNull, or, sql } from "drizzle-orm"
+import { and, eq, isNull, ne, or, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { defineQueue } from "../jobs/queue"
@@ -18,6 +18,18 @@ export const arrivals = defineQueue({
   run: async (libraryId) => {
     // Accepted requests, and those given up for want of a copy: the
     // library decides, so one whose file turns up anyway has arrived.
+    // Only the ones with something still to come, a film that hasn't
+    // arrived or a show with a season that hasn't, so a run costs what is
+    // on its way and not every request there ever was.
+    const waiting = db
+      .select({ one: sql`1` })
+      .from(requestSeason)
+      .where(
+        and(
+          eq(requestSeason.requestId, request.id),
+          isNull(requestSeason.arrivedAt),
+        ),
+      )
     const rows = await db
       .select()
       .from(request)
@@ -29,6 +41,10 @@ export const arrivals = defineQueue({
               eq(request.status, "declined"),
               eq(request.declineReason, "notFound"),
             ),
+          ),
+          or(
+            and(eq(request.kind, "movie"), isNull(request.arrivedAt)),
+            and(ne(request.kind, "movie"), sql`exists ${waiting}`),
           ),
           libraryId ? eq(request.libraryId, libraryId) : undefined,
         ),

@@ -106,9 +106,14 @@ TV app.
 - Every part has the version in the root `package.json`. Don't set one
   anywhere else; `just tag <version>` changes it and releases (see Release
   below).
-- The server and the web app have no automated tests yet, so check their
-  flows by hand in the browser. The Flutter app's Dart tests run in
-  `just flutter check`; check its screens by eye as well.
+- The web app has no automated tests yet, and the server has them only
+  for code that takes no database, so check their flows by hand in the
+  browser. A server test is a `*.test.ts` beside what it tests, on
+  `node:test`, and `pnpm test` runs them, as `pnpm verify` does. The
+  first is the recommendation scorer's, `recommendations/score.test.ts`:
+  change a weight in `score.ts` and it says which ranking moved. The
+  Flutter app's Dart tests run in `just flutter check`; check its screens
+  by eye as well.
 - Generate migrations with a descriptive snake_case name:
   `pnpm db:generate --name watch_progress`. Never edit a migration after it
   ships in a release; add a new one. Unreleased migrations may be consolidated

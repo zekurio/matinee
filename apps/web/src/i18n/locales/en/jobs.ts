@@ -3,7 +3,7 @@ import { defineMessages, plural } from "../../catalog"
 export default defineMessages("jobs", {
   "jobs.task.dispatch-requests.name": "Send requests",
   "jobs.task.dispatch-requests.description":
-    "Find accepted requests waiting to be sent.",
+    "Find accepted requests waiting to be sent, and send again the ones whose connection was out of reach once it answers.",
   "jobs.task.poll-requests.name": "Read request progress",
   "jobs.task.poll-requests.description":
     "Check active requests through each connection once.",
@@ -143,7 +143,7 @@ export default defineMessages("jobs", {
     "Delete what users had on files that went 90 days ago and never came back, such as a release that wasn't replaced.",
   "jobs.task.forget-browsed-pages.name": "Forget browsed catalog pages",
   "jobs.task.forget-browsed-pages.description":
-    "Delete pages of the filtered catalog that nobody opened for a week.",
+    "Delete pages of the filtered catalog and search results that nobody opened for a week.",
 
   "jobs.task.sync-oidc-accounts.name": "Sync provider accounts",
   "jobs.task.sync-oidc-accounts.description":

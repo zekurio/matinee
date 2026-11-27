@@ -49,6 +49,8 @@ export default defineMessages("server", {
   "server.requests.missing": "This request isn't available.",
   "server.requests.seasons": "Choose seasons listed for this show.",
   "server.requests.notNow": "You can't request this title right now.",
+  "server.requests.filmHere":
+    "This film is already here, so there's nothing to request.",
   "server.requests.declined":
     "This title was declined, so it can't be requested until an admin allows it again.",
   "server.requests.declineWaiting":

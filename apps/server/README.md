@@ -567,7 +567,8 @@ part of person pages need `MATINEE_TMDB_API_KEY`. Discover's rows show only
 titles the viewer can request. TMDB can't leave out what's here, so a
 browse page of only those can come back short. Provider answers are cached
 for 6 hours for search and feeds and a day for details, and come back
-marked stale while a provider is down.
+marked stale while a provider is down. Search results and browsed pages
+that nobody opened for a week are deleted.
 
 ### Connections
 
@@ -601,7 +602,9 @@ changes don't send it elsewhere.
 An approved request goes out ten seconds later, and until then whoever
 asked can take it back. One with no connection goes nowhere and waits for
 its file. An unreachable connection is tried again after 5,
-10, and 20 seconds, and then the request waits under Needs attention for
+10, and 20 seconds, and then the request waits under Needs attention.
+Matinee asks that connection again every minute and sends the request
+once it answers, so only a request that failed for another reason needs
 an admin. While a request is on its way, Matinee reads its progress once a
 minute. A movie has arrived when a scan finds its file, and a season with
 its first playable episode.
@@ -616,18 +619,21 @@ Home recommends titles on the server, and Discover titles to request. Both
 need `MATINEE_TMDB_API_KEY`. Watch time, rewatches, and favorites build a
 profile of what someone likes, out of the TMDB genres, keywords, people,
 and more of each title, which `title_features` keeps. A title dropped
-early counts against what it's about.
+early counts against what it's about. One that was watched and then
+deleted keeps counting, less with time, and isn't recommended again.
 
 The candidates are the library titles the person can see, plus TMDB's
 picks around their top titles. `src/recommendations/score.ts` scores them,
 with every number in `WEIGHTS`. The `recommendations` queue works one
 person out again after they watch, mark, favorite, or say "Not
-interested", and a task catches the rest daily. The best 100 on the server
-and the best 100 to request are kept per person, each with a reason.
+interested", and a task catches the rest daily. The best 100 on the
+server, and the best 100 films and 100 shows to request, are kept per
+person, each with a reason.
 
 Every title a row shows is logged once a day in
 `recommendation_impression`, with its position, score, and algorithm
-version, to compare with what got played or requested.
+version, to compare with what got played or requested. A row is kept for
+180 days.
 
 ## Accounts and sign-in
 

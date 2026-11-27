@@ -1,7 +1,7 @@
 import { type CatalogRef, CreditKind } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 import { providerCache } from "@matinee/db"
-import { and, eq, lt, sql } from "drizzle-orm"
+import { and, eq, lt, or, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { sources } from "../metadata/sources"
@@ -245,20 +245,39 @@ export function browseProvider(
   )
 }
 
-/** How long a browsed page stays after it was last fetched. */
+/** How long a browsed page or a search's results stay after they were last fetched. */
 const BROWSE_KEPT_DAYS = 7
 
 /**
- * Deletes browsed pages fetched more than a week ago. Filters make more
- * distinct pages than any feed, and an old one is only worth keeping as
- * a stand-in while TMDB is down.
+ * The keys of what people make by the thousand: a browsed page for each
+ * set of filters, and a list of results for each thing typed into a
+ * search, of titles, people, or keywords. `JSON.stringify` writes a
+ * quote inside a value with a backslash, so a pattern's `","` only
+ * matches between a key's parts, never text someone typed.
+ */
+const PASSING_KEYS = [
+  '["tmdb","%","browse",%',
+  '["%","%","search",%',
+  '["tmdb","%","people",%',
+  '["tmdb","keywords",%',
+]
+
+/**
+ * Deletes browsed pages and search results fetched more than a week
+ * ago. Filters and searches make more distinct entries than any feed,
+ * and an old one is only worth keeping as a stand-in while the provider
+ * is down.
  */
 export async function forgetBrowsedPages() {
   await db
     .delete(providerCache)
     .where(
       and(
-        sql`${providerCache.key} like ${'["tmdb","%","browse",%'}`,
+        or(
+          ...PASSING_KEYS.map(
+            (pattern) => sql`${providerCache.key} like ${pattern}`,
+          ),
+        ),
         lt(
           providerCache.fetchedAt,
           new Date(Date.now() - BROWSE_KEPT_DAYS * 86400000),

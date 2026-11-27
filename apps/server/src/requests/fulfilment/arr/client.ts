@@ -3,6 +3,7 @@ import { ORPCError } from "@orpc/server"
 
 import { BodyTooLarge, readJsonBody } from "../../../json-body"
 import { log } from "../../../log"
+import { limiter } from "../../../media/process"
 import { type FulfilmentConnection, UNREACHABLE } from "../types"
 
 const settings = t.object({ baseUrl: t.string().url() })
@@ -70,6 +71,37 @@ export async function call<T>(
       message:
         "The connection rejected the operation. Check its configuration and logs.",
     })
+  }
+}
+
+// A progress poll asks about every title on its way. Its reads go a few
+// at a time, so a long list doesn't open a connection for each at once.
+const limit = limiter(4)
+
+/**
+ * Reads of a connection's records that change slowly, like a title's
+ * own record or a show's episodes, each kept for `ms`. A progress poll
+ * runs every minute and reads the queue fresh each time, since that is
+ * what moves; without this it would also read every waiting title's
+ * record every minute, for as long as a season is months away. A record
+ * the server doesn't have isn't kept, so one added again is seen at once.
+ */
+export function remember<T>(ms: number) {
+  const kept = new Map<string, { at: number; value: T }>()
+  return async function read(
+    connection: FulfilmentConnection,
+    path: string,
+    load: () => Promise<T>,
+  ): Promise<T> {
+    const key = `${connection.id}:${path}`
+    const found = kept.get(key)
+    if (found && Date.now() - found.at < ms) return found.value
+    const value = await limit(load)
+    const now = Date.now()
+    for (const [other, entry] of kept)
+      if (now - entry.at >= ms) kept.delete(other)
+    if (value !== null) kept.set(key, { at: now, value })
+    return value
   }
 }
 

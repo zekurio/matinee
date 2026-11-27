@@ -8,6 +8,7 @@
     "build": "node build.mjs",
     "dev": "tsx watch --clear-screen=false src/index.ts",
     "start": "NODE_ENV=production node dist/server/index.mjs",
+    "test": "tsx --test \"src/**/*.test.ts\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -45,6 +45,8 @@ export default {
   "server.requests.missing": "Diese Anfrage ist nicht verfügbar.",
   "server.requests.seasons": "Wähle Staffeln aus der Liste dieser Serie.",
   "server.requests.notNow": "Du kannst diesen Titel gerade nicht anfragen.",
+  "server.requests.filmHere":
+    "Dieser Film ist schon da, es gibt also nichts anzufragen.",
   "server.requests.declined":
     "Dieser Titel wurde abgelehnt. Anfragen gehen erst wieder, wenn ein Admin sie zulässt.",
   "server.requests.declineWaiting":
