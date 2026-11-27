@@ -1037,6 +1037,12 @@ function Controls(props: {
   const label = () => itemLabel(controller().item)
   const duration = () => Math.max(0, controller().duration)
   const shown = () => scrub() ?? controller().position
+  // Both times are as wide as the longest this file can show, so the bar
+  // keeps its length as a time gains a digit, at 10:00 or 1:00:00. A digit
+  // is 1ch in tabular figures, and a colon less, so it never comes up short.
+  const clockWidth = () => ({
+    "min-width": `${formatClock(duration()).length}ch`,
+  })
   const fraction = () =>
     duration() > 0 ? Math.max(0, Math.min(1, shown() / duration())) : 0
   const loaded = () =>
@@ -1086,7 +1092,7 @@ function Controls(props: {
           )}
           <div class="t-headline one-line on-picture">{label().title}</div>
           <div class="seek-row">
-            <span class="seek-clock t-facts on-picture">
+            <span class="seek-clock t-facts on-picture" style={clockWidth()}>
               {formatClock(shown())}
             </span>
             <Tap
@@ -1122,7 +1128,10 @@ function Controls(props: {
                 <b class="t-title">{formatClock(shown())}</b>
               </span>
             </Tap>
-            <span class="seek-clock end t-facts on-picture dim75">
+            <span
+              class="seek-clock end t-facts on-picture dim75"
+              style={clockWidth()}
+            >
               {formatClock(duration())}
             </span>
           </div>
