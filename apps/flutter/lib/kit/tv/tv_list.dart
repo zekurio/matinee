@@ -6,11 +6,28 @@ import '../theme.dart';
 import 'tv_focus.dart';
 import 'tv_metrics.dart';
 
+/// How tall the [TvListItem]s under it are at least, when they don't say,
+/// for a page whose rows sit closer than a list's, as Settings' do.
+class TvListHeight extends InheritedWidget {
+  const TvListHeight({super.key, required this.height, required super.child});
+
+  final double height;
+
+  /// The height the rows here take, else [TvListItems.height].
+  static double of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<TvListHeight>()?.height ??
+      TvListItems.height;
+
+  @override
+  bool updateShouldNotify(TvListHeight old) => height != old.height;
+}
+
 /// A row to pick on a TV, in a list or a side panel: a large target that fills
 /// with the text color while it has focus. [quiet] rows have no resting fill;
 /// [selected] marks the one in force; [checked] puts a check at its end.
 /// [trailing] sits before the check in the row's content color, as
-/// [TvListValue] or [TvListSwitch].
+/// [TvListValue] or [TvListSwitch]. Without [minHeight], it's at least as tall
+/// as the [TvListHeight] above it says.
 class TvListItem extends StatelessWidget {
   const TvListItem({
     super.key,
@@ -27,7 +44,7 @@ class TvListItem extends StatelessWidget {
     this.checked = false,
     this.autofocus = false,
     this.focusNode,
-    this.minHeight = TvListItems.height,
+    this.minHeight,
     this.subtitleLines = 2,
     this.titleLines = 1,
     this.onFocusChange,
@@ -46,7 +63,7 @@ class TvListItem extends StatelessWidget {
   final bool checked;
   final bool autofocus;
   final FocusNode? focusNode;
-  final double minHeight;
+  final double? minHeight;
   final int subtitleLines;
 
   /// How many lines [title] may wrap to, for a row whose words run long
@@ -86,7 +103,9 @@ class TvListItem extends StatelessWidget {
         selected: selected,
         scale: TvFocus.rowScale,
         builder: (context, look) => ConstrainedBox(
-          constraints: BoxConstraints(minHeight: minHeight),
+          constraints: BoxConstraints(
+            minHeight: minHeight ?? TvListHeight.of(context),
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: TvListItems.inset,

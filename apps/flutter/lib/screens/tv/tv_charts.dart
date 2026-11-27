@@ -118,9 +118,9 @@ class _TvWatchTimeChartState extends State<TvWatchTimeChart> {
             children: [
               Text(
                 shown == null
-                    ? '${l.statsWatchTime}  ·  ${rangeName(stats.range, l)}'
+                    ? '${l.statsWatchTime} · ${rangeName(stats.range, l)}'
                     : '${bucketName(shown.start, stats.unit, l, locale)}'
-                          '  ·  ${l.statsPlayCount(shown.plays)}',
+                          ' · ${l.statsPlayCount(shown.plays)}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TvType.facts.style(color: colors.mutedForeground),
@@ -398,7 +398,7 @@ class _TvViewingTimesState extends State<TvViewingTimes> {
         final muted = TvType.caption.style(color: colors.mutedForeground);
         final line = focused
             ? '${l.tvStatsHeatmapCell(weekdayName(_day, locale), hourName(_hour, locale), hourName((_hour + 1) % 24, locale))}'
-                  '  ·  ${formatWatchTime(seconds[(_day, _hour)] ?? 0, l)}'
+                  ' · ${formatWatchTime(seconds[(_day, _hour)] ?? 0, l)}'
             : l.statsHeatmapPeak(
                 weekdayName(_peak.weekday, locale),
                 hourName(_peak.hour, locale),

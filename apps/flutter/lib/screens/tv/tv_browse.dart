@@ -443,7 +443,7 @@ class _TvBrowseScreenState extends ConsumerState<TvBrowseScreen> {
           detail: [
             genre != null ? l.browseGenre : l.browseStudio,
             if (pages.total case final total?) l.browseTitleCount(total),
-          ].join('  ·  '),
+          ].join(' · '),
           controls: [
             for (final (value, label, icon) in kinds)
               TvButton(
@@ -928,7 +928,7 @@ class _TvSearchScreenState extends ConsumerState<TvSearchScreen> {
           for (final MapEntry(key: libraryId, value: titles) in groups)
             TvRow(
               title:
-                  '${names[libraryId] ?? l.searchTitlesHeading}  ·  '
+                  '${names[libraryId] ?? l.searchTitlesHeading} · '
                   '${l.browseTitleCount(titles.length)}',
               row: _Search.library(libraryId),
               memory: _memory,
@@ -1090,7 +1090,7 @@ class _TvSearchScreenState extends ConsumerState<TvSearchScreen> {
       return TvRowNotice(title: heading, height: _posterHeight);
     }
     return TvRow(
-      title: '$heading  ·  ${l.browseTitleCount(items.length)}',
+      title: '$heading · ${l.browseTitleCount(items.length)}',
       row: _Search.catalog,
       memory: _memory,
       height: _posterHeight,

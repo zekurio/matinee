@@ -42,8 +42,8 @@ const _logoWidth = 360.0;
 const _logoHeight = 70.0;
 const _nameLine = 40.0;
 
-/// Between a logo and the episode line under it, so the two don't touch.
-const _subtitleGap = 10.0;
+/// Between a logo and the episode line under it, as the web's header has.
+const _subtitleGap = 2.0;
 const _subtitleHeight = _subtitleGap + 26;
 const _factsHeight = 32.0;
 const _overviewLine = 24.0;

@@ -276,7 +276,9 @@ class _TvPinnedListState extends State<TvPinnedList> {
       child: TvFollowFocus(
         controller: _scroll,
         rule: TvFollowFocus.pinned(widget.pivot),
-        sectionTop: widget.gap,
+        // A row stops [top] down, where [pivot] puts its heading, as the
+        // web's rows do. The row above has gone by then, [gap] further up.
+        sectionTop: widget.top,
         child: TvRowsScroll(
           controller: _scroll,
           top: widget.top,

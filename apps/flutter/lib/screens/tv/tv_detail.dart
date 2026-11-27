@@ -1144,7 +1144,7 @@ class _TvEpisodeScreenState extends ConsumerState<TvEpisodeScreen>
       if (season != null)
         season == 0 ? l.titleEpisodeSpecials : l.titleEpisodeSeason(season),
       if (number != null) l.titleEpisodeNumber(number),
-    ].join('  ·  ');
+    ].join(' · ');
     return _HeaderColumn(
       children: [
         Text(
@@ -1407,7 +1407,7 @@ class _PersonHeader extends StatelessWidget {
                     [
                       creditKind(person.kind, l),
                       l.browseTitleCount(person.titleCount),
-                    ].join('  ·  '),
+                    ].join(' · '),
                     style: TvType.facts.style(
                       color: colors.foreground.withValues(alpha: .85),
                     ),

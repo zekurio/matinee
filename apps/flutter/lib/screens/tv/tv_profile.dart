@@ -456,7 +456,7 @@ class _Header extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
-                      facts.join('  ·  '),
+                      facts.join(' · '),
                       style: TvType.facts.style(color: colors.mutedForeground),
                     ),
                   ),

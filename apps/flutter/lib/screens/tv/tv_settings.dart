@@ -86,8 +86,15 @@ const _categoryWidth = 260.0;
 /// and the 12 it keeps beside the rows for a focused one's growth.
 const _categoryGap = 48.0;
 
-/// Where rows start under the top, clear of the clock.
-const _rowsTop = Overscan.vertical + 60;
+/// Where rows start under the top, clear of the clock: with the list's 4
+/// over its first row, that row is level with the first category, at 95.
+const _rowsTop = Overscan.vertical + 64;
+
+/// How tall the categories and the rows beside them are, as the web's, a
+/// little shorter than other lists' so the last category ends above the
+/// drawer's Settings at the foot. Rows take the same, so each lines up with
+/// a category.
+const _itemHeight = 46.0;
 
 /// A picker's value for null, which the panel can't return as a pick.
 const _none = '';
@@ -192,44 +199,49 @@ class _TvSettingsScreenState extends ConsumerState<TvSettingsScreen> {
               width: _categoryWidth,
               child: Padding(
                 padding: const EdgeInsets.only(top: Overscan.vertical + 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  spacing: 6,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(
-                        start: TvListItems.inset,
-                        bottom: 22,
-                      ),
-                      child: Text(
-                        l.shellSettings,
-                        style: TvType.headline.style(color: colors.foreground),
-                      ),
-                    ),
-                    for (final category in TvSettingsCategory.values)
-                      Focus(
-                        canRequestFocus: false,
-                        skipTraversal: true,
-                        onKeyEvent: (_, event) => _categoryKey(event),
-                        child: TvListItem(
-                          title: category.title(l),
-                          icon: category.icon,
-                          quiet: true,
-                          selected: category == _selected,
-                          autofocus: category == _selected,
-                          focusNode: _categories[category],
-                          onFocusChange: (focused) {
-                            if (focused && _selected != category) {
-                              setState(() => _selected = category);
-                            }
-                          },
-                          onPressed: () {
-                            setState(() => _selected = category);
-                            _toRows();
-                          },
+                child: TvListHeight(
+                  height: _itemHeight,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    spacing: 6,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(
+                          start: TvListItems.inset,
+                          bottom: 22,
+                        ),
+                        child: Text(
+                          l.shellSettings,
+                          style: TvType.headline.style(
+                            color: colors.foreground,
+                          ),
                         ),
                       ),
-                  ],
+                      for (final category in TvSettingsCategory.values)
+                        Focus(
+                          canRequestFocus: false,
+                          skipTraversal: true,
+                          onKeyEvent: (_, event) => _categoryKey(event),
+                          child: TvListItem(
+                            title: category.title(l),
+                            icon: category.icon,
+                            quiet: true,
+                            selected: category == _selected,
+                            autofocus: category == _selected,
+                            focusNode: _categories[category],
+                            onFocusChange: (focused) {
+                              if (focused && _selected != category) {
+                                setState(() => _selected = category);
+                              }
+                            },
+                            onPressed: () {
+                              setState(() => _selected = category);
+                              _toRows();
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -257,37 +269,42 @@ class _TvSettingsScreenState extends ConsumerState<TvSettingsScreen> {
                     child: TvAxisClip(
                       axis: Axis.vertical,
                       child: LayoutBuilder(
-                        builder: (context, constraints) => ListView(
-                          // A new category starts its rows afresh, at the top.
-                          key: ValueKey(_selected),
-                          controller: _scroll,
-                          clipBehavior: Clip.none,
-                          padding: EdgeInsetsDirectional.only(
-                            top: 4,
-                            // Half the rows' height after the last, so it can
-                            // rise past the row above rather than leave that
-                            // one cut at the top.
-                            bottom: math.max(
-                              Overscan.vertical + 24,
-                              constraints.maxHeight / 2,
+                        builder: (context, constraints) => TvListHeight(
+                          height: _itemHeight,
+                          child: ListView(
+                            // A new category starts its rows afresh, at the top.
+                            key: ValueKey(_selected),
+                            controller: _scroll,
+                            clipBehavior: Clip.none,
+                            padding: EdgeInsetsDirectional.only(
+                              top: 4,
+                              // Half the rows' height after the last, so it can
+                              // rise past the row above rather than leave that
+                              // one cut at the top.
+                              bottom: math.max(
+                                Overscan.vertical + 24,
+                                constraints.maxHeight / 2,
+                              ),
                             ),
+                            children: switch (_selected) {
+                              TvSettingsCategory.playback => [
+                                const _PlaybackRows(),
+                              ],
+                              TvSettingsCategory.subtitles => [
+                                const _SubtitleRows(),
+                              ],
+                              TvSettingsCategory.languages => [
+                                const _LanguageRows(),
+                              ],
+                              TvSettingsCategory.devices => [
+                                const _DeviceRows(),
+                              ],
+                              TvSettingsCategory.account => [
+                                const _AccountRows(),
+                              ],
+                              TvSettingsCategory.about => [const _AboutRows()],
+                            },
                           ),
-                          children: switch (_selected) {
-                            TvSettingsCategory.playback => [
-                              const _PlaybackRows(),
-                            ],
-                            TvSettingsCategory.subtitles => [
-                              const _SubtitleRows(),
-                            ],
-                            TvSettingsCategory.languages => [
-                              const _LanguageRows(),
-                            ],
-                            TvSettingsCategory.devices => [const _DeviceRows()],
-                            TvSettingsCategory.account => [
-                              const _AccountRows(),
-                            ],
-                            TvSettingsCategory.about => [const _AboutRows()],
-                          },
                         ),
                       ),
                     ),
