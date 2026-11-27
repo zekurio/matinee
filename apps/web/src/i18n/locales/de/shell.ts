@@ -25,5 +25,7 @@ export default {
   "shell.settings": "Einstellungen",
   "shell.signOut": "Abmelden",
   "shell.skipToContent": "Zum Inhalt springen",
+  "shell.newBuild.title": "Eine neue Version von Matinee ist verfügbar",
+  "shell.newBuild.reload": "Neu laden",
   "shell.apiReference": "API-Referenz",
 } satisfies TranslationOf<typeof source>

@@ -29,6 +29,10 @@ export default defineMessages("shell", {
   "shell.settings": "Settings",
   "shell.signOut": "Sign out",
   "shell.skipToContent": "Skip to content",
+  // The toast once the server runs a newer build than the open tab, in
+  // components/new-build-notice.ts.
+  "shell.newBuild.title": "A new version of Matinee is available",
+  "shell.newBuild.reload": "Reload",
 
   // The REST API's reference page, in routes/api-docs.tsx.
   "shell.apiReference": "API reference",

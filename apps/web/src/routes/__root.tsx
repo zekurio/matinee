@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/solid-query"
 import { createRootRouteWithContext, Outlet } from "@tanstack/solid-router"
 
+import { useNewBuildNotice } from "@/components/new-build-notice"
 import { Toaster } from "@/kit/toast"
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
@@ -8,6 +9,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 )
 
 function Root() {
+  useNewBuildNotice()
   return (
     <>
       <Outlet />

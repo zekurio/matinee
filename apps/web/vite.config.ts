@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
@@ -128,6 +129,55 @@ function preloadLocale(): Plugin {
 }
 
 /**
+ * Names the build in each document's head, as `<meta name="matinee-build">`,
+ * so a tab can ask the server for the page again and tell whether it's
+ * been deployed anew (`lib/new-build.ts`). The root `package.json`'s
+ * version changes only with a release, so it can't say that. The name is
+ * a hash of every file the document can load, whose names hold hashes of
+ * their own content, so the same source builds the same name.
+ */
+function buildId(): Plugin {
+  return {
+    name: "matinee:build-id",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler(_html, { bundle, chunk }) {
+        if (!bundle || !chunk) return
+        const files = new Set<string>()
+        const visit = (name: string) => {
+          const output = bundle[name]
+          if (files.has(name) || !output) return
+          files.add(name)
+          if (output.type !== "chunk") return
+          for (const css of output.viteMetadata?.importedCss ?? []) {
+            files.add(css)
+          }
+          for (const asset of output.viteMetadata?.importedAssets ?? []) {
+            files.add(asset)
+          }
+          for (const next of [...output.imports, ...output.dynamicImports]) {
+            visit(next)
+          }
+        }
+        visit(chunk.fileName)
+        const id = createHash("sha256")
+          .update([...files].sort().join("\n"))
+          .digest("hex")
+          .slice(0, 16)
+        return [
+          {
+            tag: "meta",
+            attrs: { name: "matinee-build", content: id },
+            injectTo: "head",
+          },
+        ]
+      },
+    },
+  }
+}
+
+/**
  * Serves `/tv` as `/tv/`, whose own document holds the TV UI. The route
  * is a document of its own, so the desktop app's root font size and
  * theme don't follow it, and the TV one doesn't follow the desktop app.
@@ -236,6 +286,7 @@ export default defineConfig(({ mode }) => {
       solid(),
       tailwindcss(),
       preloadTextFace(),
+      buildId(),
       preloadLocale(),
       precompress(),
     ],
