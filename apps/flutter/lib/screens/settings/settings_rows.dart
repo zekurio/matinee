@@ -153,7 +153,7 @@ class _PressRow extends StatelessWidget {
       onPressed: onPressed,
       label: label,
       checked: checked,
-      builder: (context, state) => ColoredBox(
+      builder: (context, state) => PressFill(
         color: colors.foreground.withValues(
           alpha: state == PressState.idle ? 0 : .06,
         ),
@@ -469,7 +469,7 @@ class PickerRow<T> extends StatelessWidget {
         onPressed: toggle,
         focusNode: focus,
         label: '$title, $shown',
-        builder: (context, state) => ColoredBox(
+        builder: (context, state) => PressFill(
           color: colors.foreground.withValues(
             alpha: state == PressState.idle && !isOpen ? 0 : .06,
           ),

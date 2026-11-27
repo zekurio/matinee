@@ -17,8 +17,9 @@ import 'title_data.dart';
 import 'title_parts.dart';
 
 /// A movie's or a show's page, as the web's title page: the backdrop under the
-/// heading and its facts, the overview and crew, a movie's file with a picker
-/// when it has several, Play and the buttons beside it, a show's episode up
+/// heading and its facts, a large poster beside it all from a tablet's width
+/// up, Play and the buttons beside it, a movie's file with a picker when it
+/// has several, the overview and the table of details, a show's episode up
 /// next and seasons, the cast, and the related titles.
 class TitleScreen extends ConsumerStatefulWidget {
   const TitleScreen({super.key, required this.id});
@@ -82,66 +83,85 @@ class _TitleScreenState extends ConsumerState<TitleScreen> with PendingMarks {
     final backdrop = title.images.backdrop;
     final related = relatedKey(title);
     final gaps = watchShowGaps(ref, title);
+    final sources = [
+      if (backdrop != null) ArtSource(backdrop),
+      if (play != null) FrameSource(play.id),
+    ];
+    final heading = TitleHeading(
+      title: title,
+      flags: file == null ? const [] : mediaFlags(file),
+    );
+    // From the name down, as the web's column: Play and the buttons beside
+    // it, a movie's file, then what the provider knows.
+    final column = [
+      ActionRow(
+        play: play,
+        watched: watched,
+        onWatched: () => toggleWatched(
+          context,
+          watched: watched,
+          name: title.name,
+          send: (api, to, at) =>
+              MediaMarks.title(api, title.id, watched: to, at: at),
+          pending: pendingFor('watched', title),
+          askUnwatched: show
+              ? askShowUnwatched(title.name, count: title.itemCount)
+              : null,
+        ),
+        favorite: favorite,
+        onFavorite: () => toggleFavorite(
+          context,
+          favorite: favorite,
+          send: (api, to) =>
+              MediaMarks.favoriteTitle(api, title.id, favorite: to),
+          pending: pendingFor('favorite', title),
+        ),
+        onMore: hasActionsFor(ref, more)
+            ? () => showActions(context, more)
+            : null,
+        trailers: title.trailers,
+        started: title.seasons.any((season) => season.watchedCount > 0),
+      ),
+      // A movie's file: what it holds. A show's differ by episode.
+      if (file != null)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: MediaInfo(item: file),
+        ),
+      if (file != null && files.length > 1)
+        FilePicker(
+          files: files,
+          selected: file,
+          onSelected: (picked) => setState(() => _fileId = picked.id),
+        ),
+    ];
     final page = TitleScaffold(
       sections: [
-        Backdrop(
-          sources: [
-            if (backdrop != null) ArtSource(backdrop),
-            if (play != null) FrameSource(play.id),
-          ],
-          toneKey: title.id,
-          top: wide ? headingTop(context) : phoneHeadingTop(context),
-          // Phones leave the poster out, for the name to have the width.
-          child: TitleHeading(
+        if (wide)
+          // The poster beside it all, the column a section a frame.
+          TitleAside(
             title: title,
-            flags: file == null ? const [] : mediaFlags(file),
-            poster: wide,
+            sources: sources,
+            sections: [
+              heading,
+              ...column,
+              if (OverviewDetails.any(title)) OverviewDetails(title: title),
+            ],
+          )
+        else ...[
+          // Phones leave the poster out, for the name to have the width.
+          Backdrop(
+            sources: sources,
+            toneKey: title.id,
+            height: titleBackdropHeight(context),
+            top: titleTop(context),
+            child: heading,
           ),
-        ),
-        if (title.overview case final overview?)
-          Overview(text: overview, tagline: title.tagline),
-        if (CrewLines.any(title.credits, title.studios))
-          CrewLines(credits: title.credits, studios: title.studios),
-        // A movie's file: what it holds. A show's differ by episode.
-        if (file != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: MediaInfo(item: file),
-          ),
-        if (file != null && files.length > 1)
-          FilePicker(
-            files: files,
-            selected: file,
-            onSelected: (picked) => setState(() => _fileId = picked.id),
-          ),
-        ActionRow(
-          play: play,
-          watched: watched,
-          onWatched: () => toggleWatched(
-            context,
-            watched: watched,
-            name: title.name,
-            send: (api, to, at) =>
-                MediaMarks.title(api, title.id, watched: to, at: at),
-            pending: pendingFor('watched', title),
-            askUnwatched: show
-                ? askShowUnwatched(title.name, count: title.itemCount)
-                : null,
-          ),
-          favorite: favorite,
-          onFavorite: () => toggleFavorite(
-            context,
-            favorite: favorite,
-            send: (api, to) =>
-                MediaMarks.favoriteTitle(api, title.id, favorite: to),
-            pending: pendingFor('favorite', title),
-          ),
-          onMore: hasActionsFor(ref, more)
-              ? () => showActions(context, more)
-              : null,
-          trailers: title.trailers,
-          started: title.seasons.any((season) => season.watchedCount > 0),
-        ),
+          ...column,
+          if (title.overview case final overview?)
+            Overview(text: overview, tagline: title.tagline, lines: 6),
+          if (TitleDetails.any(title)) TitleDetails(title: title),
+        ],
         if (show) ...[
           if (next != null && showsNextUp(title)) NextUpEpisode(item: next),
           // One season, so its episodes go right on the show's page too.

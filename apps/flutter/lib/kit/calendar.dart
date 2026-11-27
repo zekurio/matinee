@@ -173,7 +173,7 @@ class _CalendarState extends State<Calendar> {
       shape: shape,
       builder: (context, state) => AspectRatio(
         aspectRatio: 1,
-        child: DecoratedBox(
+        child: PressFill(
           decoration: BoxDecoration(
             borderRadius: shape,
             color: selected

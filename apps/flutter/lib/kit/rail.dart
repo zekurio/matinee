@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'cards.dart';
 import 'icon.dart';
 import 'press_indication.dart';
+import 'staggered.dart';
 import 'states.dart';
 import 'theme.dart';
 import 'tokens.dart';
@@ -193,9 +194,11 @@ class _RailState extends State<Rail> {
                     const SizedBox(width: CardMetrics.gap),
                 itemBuilder: (context, index) => SizedBox(
                   width: widget.itemWidth,
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: widget.itemBuilder(context, index),
+                  child: Staggered(
+                    builder: (context) => Align(
+                      alignment: Alignment.topCenter,
+                      child: widget.itemBuilder(context, index),
+                    ),
                   ),
                 ),
               ),

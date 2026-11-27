@@ -9873,5 +9873,27 @@
         "type": "int"
       }
     }
+  },
+  "webPeopleMore": "{count, plural, one{{count} more} other{{count} more}}",
+  "@webPeopleMore": {
+    "description": "people.more",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webTitleDetailsGenres": "{count, plural, one{Genre} other{Genres}}",
+  "@webTitleDetailsGenres": {
+    "description": "title.details.genres",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webTitleDetailsReleased": "Released",
+  "@webTitleDetailsReleased": {
+    "description": "title.details.released"
   }
 }

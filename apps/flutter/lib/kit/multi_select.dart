@@ -436,7 +436,7 @@ class _ChoiceRow extends StatelessWidget {
       label: [choice.label, ?count].join(', '),
       checked: selected,
       shape: const BorderRadius.all(Radius.circular(KitRadius.md)),
-      builder: (context, state) => ColoredBox(
+      builder: (context, state) => PressFill(
         color: colors.foreground.withValues(
           alpha: state == PressState.idle ? 0 : .06,
         ),

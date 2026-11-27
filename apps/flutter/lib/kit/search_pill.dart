@@ -153,7 +153,7 @@ class _PillAction extends StatelessWidget {
       label: label,
       shape: KitRadius.pill,
       focusInsets: const EdgeInsets.all(4),
-      builder: (context, state) => DecoratedBox(
+      builder: (context, state) => PressFill(
         decoration: BoxDecoration(
           color: state == PressState.pressed ? colors.hairline : null,
           borderRadius: KitRadius.pill,

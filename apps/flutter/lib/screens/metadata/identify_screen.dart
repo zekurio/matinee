@@ -321,7 +321,7 @@ class MatchRow extends StatelessWidget {
         ?match.year?.toString(),
         if (current) l.titleIdentifyCurrent,
       ].join(', '),
-      builder: (context, state) => ColoredBox(
+      builder: (context, state) => PressFill(
         color: colors.foreground.withValues(
           alpha: state == PressState.idle ? 0 : .06,
         ),

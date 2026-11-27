@@ -311,7 +311,7 @@ class _DownloadHitRow extends StatelessWidget {
       onPressed: onPressed,
       label: [hit.name, ?detail].join(', '),
       shape: KitRadius.control,
-      builder: (context, state) => ColoredBox(
+      builder: (context, state) => PressFill(
         color: colors.foreground.withValues(
           alpha: state == PressState.idle ? 0 : .04,
         ),
@@ -467,6 +467,7 @@ class _Results extends ConsumerWidget {
             columns: posterColumns,
             aspectRatio: CardMetrics.poster,
             itemCount: titles.length,
+            itemId: (index) => titles[index].id,
             itemBuilder: (context, index) => TitleCard(
               title: titles[index],
               detail: titles[index].year?.toString(),

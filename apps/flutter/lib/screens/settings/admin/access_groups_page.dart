@@ -197,7 +197,7 @@ class _GroupRow extends StatelessWidget {
     return PressIndication(
       onPressed: onPressed,
       label: l.webAccessGroupActions(name),
-      builder: (context, state) => ColoredBox(
+      builder: (context, state) => PressFill(
         color: colors.foreground.withValues(
           alpha: state == PressState.idle ? 0 : .06,
         ),

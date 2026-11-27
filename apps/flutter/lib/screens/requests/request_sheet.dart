@@ -211,7 +211,7 @@ class _SeasonRow extends StatelessWidget {
       label: '$name, $detail',
       shape: KitRadius.control,
       builder: (context, state) => ExcludeSemantics(
-        child: Container(
+        child: PressFill(
           constraints: const BoxConstraints(minHeight: 52),
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           decoration: BoxDecoration(

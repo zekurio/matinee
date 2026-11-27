@@ -199,8 +199,8 @@ class TvListSwitch extends StatelessWidget {
     final color = DefaultTextStyle.of(context).style.color ?? colors.foreground;
     return TweenAnimationBuilder<double>(
       tween: Tween(end: checked ? 1 : 0),
-      duration: KitMotion.move,
-      curve: KitMotion.easing,
+      duration: TvMotion.move,
+      curve: TvMotion.easing,
       builder: (context, knob, _) => Container(
         width: 48,
         height: 28,

@@ -553,7 +553,7 @@ class _PermissionRow extends StatelessWidget {
       button: false,
       checked: checked,
       shape: KitRadius.control,
-      builder: (context, state) => Container(
+      builder: (context, state) => PressFill(
         constraints: const BoxConstraints(minHeight: 44),
         padding: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(

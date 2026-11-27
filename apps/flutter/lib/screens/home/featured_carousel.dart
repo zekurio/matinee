@@ -10,6 +10,7 @@ import '../../kit/kit.dart';
 import '../../l10n/app_localizations.dart';
 import '../../media/artwork.dart';
 import '../../media/blurhash.dart';
+import '../../media/still_image.dart';
 import '../../router.dart';
 import 'home_layout.dart';
 
@@ -37,6 +38,34 @@ class _FeaturedCarouselViewState extends State<FeaturedCarouselView> {
   int _current = 0;
 
   int get _count => widget.slides.length;
+
+  /// What [_neededHeight] measured last, and for what. Home's tickers
+  /// stopping and starting rebuild the row, as when it's covered by a page
+  /// or left for another tab and back, and measuring every name again
+  /// costs that frame more than a millisecond.
+  ({Object key, double height})? _measured;
+
+  double _measuredHeight(
+    double width,
+    double base,
+    TextStyle nameStyle,
+    int lines,
+    TextScaler scaler,
+  ) {
+    final key = (widget.slides, width, base, nameStyle, lines, scaler);
+    final measured = _measured;
+    if (measured != null && measured.key == key) return measured.height;
+    final height = _neededHeight(
+      widget.slides,
+      width,
+      base,
+      nameStyle,
+      lines,
+      scaler,
+    );
+    _measured = (key: key, height: height);
+    return height;
+  }
 
   @override
   void dispose() {
@@ -108,7 +137,7 @@ class _FeaturedCarouselViewState extends State<FeaturedCarouselView> {
         final lines = scaler.scale(10) >= 15 ? 3 : 2;
         final height = math.max(
           base,
-          _neededHeight(widget.slides, width, base, nameStyle, lines, scaler),
+          _measuredHeight(width, base, nameStyle, lines, scaler),
         );
         final stride = width + CardMetrics.gutter;
         final pager = _pagerFor(row == 0 ? 1 : stride / row);
@@ -323,8 +352,11 @@ class _FeaturedCard extends StatelessWidget {
                   _PosterArt(art: final poster) => _poster(poster),
                 },
                 const DecoratedBox(decoration: BoxDecoration(gradient: _shade)),
-                if (state == PressState.pressed)
-                  ColoredBox(color: colors.foreground.withValues(alpha: .1)),
+                PressFill(
+                  color: colors.foreground.withValues(
+                    alpha: state == PressState.pressed ? .1 : 0,
+                  ),
+                ),
                 Positioned(
                   left: FeaturedCarousel.padding,
                   bottom: FeaturedCarousel.padding,
@@ -370,11 +402,7 @@ class _FeaturedCard extends StatelessWidget {
     final posterHeight = height - FeaturedCarousel.posterInset * 2;
     return [
       if (hash != null)
-        Image(
-          image: BlurHashImage(hash),
-          fit: BoxFit.cover,
-          excludeFromSemantics: true,
-        )
+        StillImage(image: BlurHashImage(hash), fit: BoxFit.cover)
       else
         ImageFiltered(
           imageFilter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),

@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -6,6 +7,7 @@ import 'api/matinee_api.dart' show DevicePlatform;
 import 'app.dart';
 import 'core/apple_tv.dart';
 import 'core/device.dart';
+import 'core/frame_stats.dart';
 import 'core/fresh_start.dart';
 import 'core/session.dart';
 import 'core/session_lifecycle.dart';
@@ -15,9 +17,20 @@ import 'media/artwork.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Only a profile build made with `--dart-define=MATINEE_FRAME_STATS=true`
+  // registers the frame timing callback.
+  startFrameStats();
   // The Kotlin app's leftovers go before anything reads storage.
   await freshStart();
   final device = await Device.load();
+  // Touch comes at its own rate, which doesn't line up with the display's
+  // frames, so resample it to them and a scroll moves evenly under the
+  // finger. A TV's remote and a desktop's mouse would only gain the delay.
+  if (!device.isTv &&
+      (device.platform == DevicePlatform.android ||
+          device.platform == DevicePlatform.ios)) {
+    GestureBinding.instance.resamplingEnabled = true;
+  }
   // The storage plugins have no tvOS side, so an Apple TV's settings and
   // tokens go through the app's own channel, set up before the first read.
   final appleTv = device.platform == DevicePlatform.tvos

@@ -282,7 +282,7 @@ class _Swatch extends StatelessWidget {
       onPressed: onPressed,
       label: name,
       selected: selected,
-      builder: (context, state) => Container(
+      builder: (context, state) => PressFill(
         width: 40,
         height: 40,
         padding: const EdgeInsets.all(3),

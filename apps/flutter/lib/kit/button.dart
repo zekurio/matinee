@@ -232,14 +232,14 @@ class MatineeButton extends StatelessWidget {
         // button shows 2px less than its height.
         final surface = look == ButtonLook.frosted
             ? Glass(shape: radius, tint: fill, border: outline, child: inset)
-            : DecoratedBox(
+            : PressFill(
                 decoration: BoxDecoration(
                   border: outline,
                   borderRadius: radius,
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(1),
-                  child: DecoratedBox(
+                  child: PressFill(
                     decoration: BoxDecoration(
                       color: look == ButtonLook.glass
                           ? Color.alphaBlend(fill, const Color(0x66000000))

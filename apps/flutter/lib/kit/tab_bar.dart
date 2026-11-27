@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 
 import 'glass.dart';
@@ -15,6 +16,16 @@ class TabBarItem {
   final Object id;
   final String icon;
   final String label;
+
+  @override
+  bool operator ==(Object other) =>
+      other is TabBarItem &&
+      other.id == id &&
+      other.icon == icon &&
+      other.label == label;
+
+  @override
+  int get hashCode => Object.hash(id, icon, label);
 }
 
 /// Share one state between pages to retain the selected tab across navigation.
@@ -26,7 +37,13 @@ class TabBarState extends ValueNotifier<Object?> {
 
 final _blur = ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20);
 
-class TabBar extends StatelessWidget {
+/// The tabs along the bottom of a phone's screen.
+///
+/// The router builds the shell, and with it this bar, on every navigation,
+/// opening a page or going back included. While its tabs, its state, and
+/// what it depends on stay the same, the bar keeps what it built, so none
+/// of it builds again in that frame.
+class TabBar extends StatefulWidget {
   const TabBar({
     super.key,
     required this.items,
@@ -39,7 +56,34 @@ class TabBar extends StatelessWidget {
   final ValueChanged<Object>? onSelected;
 
   @override
-  Widget build(BuildContext context) {
+  State<TabBar> createState() => _TabBarState();
+}
+
+class _TabBarState extends State<TabBar> {
+  Widget? _built;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _built = null;
+  }
+
+  @override
+  void didUpdateWidget(TabBar old) {
+    super.didUpdateWidget(old);
+    if (widget.state != old.state || !listEquals(widget.items, old.items)) {
+      _built = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => _built ??= _build(context);
+
+  List<TabBarItem> get items => widget.items;
+
+  TabBarState get state => widget.state;
+
+  Widget _build(BuildContext context) {
     final colors = MatineeTheme.of(context);
     return Semantics(
       container: true,
@@ -75,7 +119,8 @@ class TabBar extends StatelessWidget {
                                 showLabel: labels,
                                 onPressed: () {
                                   state.select(item.id);
-                                  onSelected?.call(item.id);
+                                  // The bar's latest, as what it built stays.
+                                  widget.onSelected?.call(item.id);
                                 },
                               ),
                             ),
@@ -96,12 +141,25 @@ class TabBar extends StatelessWidget {
   /// one doesn't, as on a small phone, with large text, or in a longer
   /// language, every tab shows only its icon, so they stay alike; screen
   /// readers still read the names.
+  ///
+  /// The answer is kept for the next build, since the router builds the
+  /// shell, and this bar, on every navigation, and measuring the labels
+  /// again each time costs a page's first frame half a millisecond.
   bool _labelsFit(BuildContext context, double width) {
     final style = DefaultTextStyle.of(context).style
         .merge(KitText.xs.style(weight: FontWeight.w500));
     final scaler = MediaQuery.textScalerOf(context);
     final direction = Directionality.of(context);
-    return items.every((item) {
+    final key = (
+      labels: items.map((item) => item.label).join('\u0000'),
+      style: style,
+      scaler: scaler,
+      direction: direction,
+      width: width,
+    );
+    final last = _lastFit;
+    if (last != null && last.key == key) return last.fits;
+    final fits = items.every((item) {
       final painter = TextPainter(
         text: TextSpan(text: item.label, style: style),
         textScaler: scaler,
@@ -112,8 +170,24 @@ class TabBar extends StatelessWidget {
       painter.dispose();
       return fits;
     });
+    _lastFit = (key: key, fits: fits);
+    return fits;
   }
 }
+
+/// What [_TabBarState._labelsFit] measured last, and for what.
+({
+  ({
+    String labels,
+    TextStyle style,
+    TextScaler scaler,
+    TextDirection direction,
+    double width,
+  })
+  key,
+  bool fits,
+})?
+_lastFit;
 
 class _Tab extends StatelessWidget {
   const _Tab({

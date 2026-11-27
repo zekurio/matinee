@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -27,7 +29,11 @@ final class BlurHashImage extends ImageProvider<BlurHashImage> {
   ) => OneFrameImageStreamCompleter(_load(key));
 
   static Future<ImageInfo> _load(BlurHashImage key) async {
-    final pixels = decodeBlurHash(key.hash, key.size, key.size);
+    final pixels = await BlurHashDecoder.instance.decode(
+      key.hash,
+      key.size,
+      key.size,
+    );
     if (pixels == null) throw FormatException('not a blurhash', key.hash);
     final buffer = await ui.ImmutableBuffer.fromUint8List(pixels);
     final descriptor = ui.ImageDescriptor.raw(
@@ -52,14 +58,77 @@ final class BlurHashImage extends ImageProvider<BlurHashImage> {
   int get hashCode => Object.hash(hash, size);
 }
 
+/// Decodes BlurHashes in an isolate of its own, kept for the app's life,
+/// so a card that scrolls in doesn't spend the frame working out a
+/// thousand pixels. The picture never showed in the frame it was asked
+/// for anyway: making it an image already waited on the engine.
+final class BlurHashDecoder {
+  BlurHashDecoder._();
+
+  static final instance = BlurHashDecoder._();
+
+  Future<SendPort>? _worker;
+  final _waiting = <int, Completer<Uint8List?>>{};
+  int _next = 0;
+
+  /// [decodeBlurHash], in the worker.
+  Future<Uint8List?> decode(String hash, int width, int height) async {
+    final worker = await (_worker ??= _start());
+    final id = _next++;
+    final answer = Completer<Uint8List?>();
+    _waiting[id] = answer;
+    worker.send((id, hash, width, height));
+    return answer.future;
+  }
+
+  Future<SendPort> _start() async {
+    final replies = RawReceivePort();
+    final ready = Completer<SendPort>();
+    replies.handler = (Object? message) {
+      switch (message) {
+        case final SendPort port:
+          ready.complete(port);
+        case (final int id, final TransferableTypedData? pixels):
+          _waiting.remove(id)?.complete(pixels?.materialize().asUint8List());
+      }
+    };
+    await Isolate.spawn(
+      _serve,
+      replies.sendPort,
+      debugName: 'blurhash',
+      errorsAreFatal: false,
+    );
+    return ready.future;
+  }
+
+  static void _serve(SendPort replies) {
+    final requests = RawReceivePort();
+    requests.handler = (Object? message) {
+      if (message case (
+        final int id,
+        final String hash,
+        final int width,
+        final int height,
+      )) {
+        final pixels = decodeBlurHash(hash, width, height);
+        replies.send((
+          id,
+          pixels == null ? null : TransferableTypedData.fromList([pixels]),
+        ));
+      }
+    };
+    replies.send(requests.sendPort);
+  }
+}
+
 const _chars =
     '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#\$%*+,-.:;=?@[]^_{|}~';
 
 /// [hash] as [width] by [height] RGBA pixels, or null when it isn't one.
 ///
-/// It runs on the UI thread as an image starts to load, once for every card
-/// that scrolls in, so the cosines are worked out once per column and row
-/// rather than for every pixel.
+/// It runs once for every card that scrolls in, in [BlurHashDecoder]'s
+/// isolate, so the cosines are worked out once per column and row rather
+/// than for every pixel.
 Uint8List? decodeBlurHash(String hash, int width, int height) {
   int? decode83(int from, int to) {
     var value = 0;

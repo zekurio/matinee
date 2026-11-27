@@ -188,7 +188,7 @@ class _ServerRow extends StatelessWidget {
             onPressed: busy ? null : onPressed,
             autofocus: autofocus,
             shape: KitRadius.control,
-            builder: (context, state) => DecoratedBox(
+            builder: (context, state) => PressFill(
               decoration: BoxDecoration(
                 borderRadius: KitRadius.control,
                 color: colors.foreground.withValues(
@@ -275,7 +275,7 @@ class _AddRow extends StatelessWidget {
     return PressIndication(
       onPressed: onPressed,
       shape: KitRadius.control,
-      builder: (context, state) => DecoratedBox(
+      builder: (context, state) => PressFill(
         decoration: BoxDecoration(
           borderRadius: KitRadius.control,
           color: colors.foreground.withValues(

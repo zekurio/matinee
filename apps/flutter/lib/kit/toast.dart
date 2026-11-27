@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import 'glass.dart';
 import 'icon.dart';
+import 'motion.dart';
 import 'press_indication.dart';
 import 'spinner.dart';
 import 'theme.dart';
@@ -137,7 +138,7 @@ class _ToastAction extends StatelessWidget {
     return PressIndication(
       onPressed: onPressed,
       shape: shape,
-      builder: (context, state) => Container(
+      builder: (context, state) => PressFill(
         constraints: const BoxConstraints(minHeight: 28),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
@@ -268,28 +269,52 @@ class ToastHost extends StatelessWidget {
     listenable: state,
     builder: (context, child) {
       final entry = state._queue.firstOrNull;
-      if (entry == null) return const SizedBox.shrink();
       if (tv) {
+        if (entry == null) return const SizedBox.shrink();
         return _TvToast(
           key: ObjectKey(entry),
           message: entry.message,
           description: entry.description,
         );
       }
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Toast(
-            key: ObjectKey(entry),
-            message: entry.message,
-            description: entry.description,
-            kind: entry.kind,
-            actionLabel: entry.actionLabel,
-            onAction: entry.actionLabel == null
-                ? null
-                : () => state._finish(entry, ToastResult.action),
+      // Each rises a little as it fades in, and sinks as it fades out, as
+      // Material's snackbar does, the next one coming in as it goes.
+      return AnimatedSwitcher(
+        duration: KitMotion.of(context, KitMotion.enter),
+        reverseDuration: KitMotion.of(context, KitMotion.exit),
+        switchInCurve: KitMotion.easing,
+        switchOutCurve: KitMotion.exitEasing,
+        layoutBuilder: (current, previous) => Stack(
+          alignment: Alignment.bottomCenter,
+          children: [...previous, ?current],
+        ),
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, .25),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
           ),
         ),
+        child: entry == null
+            ? const SizedBox.shrink()
+            : SafeArea(
+                key: ObjectKey(entry),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Toast(
+                    message: entry.message,
+                    description: entry.description,
+                    kind: entry.kind,
+                    actionLabel: entry.actionLabel,
+                    onAction: entry.actionLabel == null
+                        ? null
+                        : () => state._finish(entry, ToastResult.action),
+                  ),
+                ),
+              ),
       );
     },
   );

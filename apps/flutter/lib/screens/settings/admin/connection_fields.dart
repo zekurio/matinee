@@ -294,7 +294,7 @@ class _SelectRow extends StatelessWidget {
               focusNode: focus,
               label: '$label, $shown',
               shape: KitRadius.control,
-              builder: (context, state) => DecoratedBox(
+              builder: (context, state) => PressFill(
                 decoration: BoxDecoration(
                   color: colors.field,
                   borderRadius: KitRadius.control,
@@ -441,7 +441,7 @@ class _PickLibrary extends StatelessWidget {
         focusNode: focus,
         label: '$label, $shown',
         shape: KitRadius.control,
-        builder: (context, state) => DecoratedBox(
+        builder: (context, state) => PressFill(
           decoration: BoxDecoration(
             color: colors.field,
             borderRadius: KitRadius.control,

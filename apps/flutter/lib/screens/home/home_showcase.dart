@@ -116,7 +116,7 @@ class _HomeShowcaseState extends ConsumerState<HomeShowcase>
   }
 
   /// The pictures already asked for ahead of their title.
-  final _primed = <Uri>{};
+  final _primed = <ArtworkImage>{};
 
   /// Loads the next title's art and logo before it takes the card, so the
   /// change shows its picture at once rather than its placeholder. One that
@@ -127,17 +127,28 @@ class _HomeShowcaseState extends ConsumerState<HomeShowcase>
     if (api == null) return;
     final loader = ref.read(artworkLoaderProvider);
     final slide = widget.slides[(_current + 1) % _count];
-    final pixels =
-        ShowcaseLayout.width(MediaQuery.sizeOf(context), CardMetrics.gutter) *
+    // The card's box, as its picture measures it, so this is the decode
+    // the card asks for.
+    final window = MediaQuery.sizeOf(context);
+    final gutter = CardMetrics.gutter;
+    final box =
+        Size(
+          ShowcaseLayout.width(window, gutter),
+          ShowcaseLayout.height(
+            window,
+            gutter,
+            MediaQuery.textScalerOf(context),
+          ),
+        ) *
         MediaQuery.devicePixelRatioOf(context);
-    for (final url in [
-      _artOf(slide).first.url(api.paths, pixels),
-      if (slide.title.images.logo case final logo?) _logoUrl(api.paths, logo),
+    final art = _artOf(slide).first.url(api.paths, box.width);
+    for (final image in [
+      ArtworkImage.sized(art, loader, box),
+      if (slide.title.images.logo case final logo?)
+        ArtworkImage(_logoUrl(api.paths, logo), loader),
     ]) {
-      if (!_primed.add(url)) continue;
-      unawaited(
-        precacheImage(ArtworkImage(url, loader), context, onError: (_, _) {}),
-      );
+      if (!_primed.add(image)) continue;
+      unawaited(precacheImage(image, context, onError: (_, _) {}));
     }
   }
 

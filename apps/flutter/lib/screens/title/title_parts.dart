@@ -46,6 +46,35 @@ double headingTop(BuildContext context) => math.max(
 double phoneHeadingTop(BuildContext context) =>
     math.max(160, MediaQuery.sizeOf(context).height * .3);
 
+/// How tall a title's backdrop is: 16:9 on a phone, so the details start
+/// nearer the top, else as other pages' [backdropHeight].
+double titleBackdropHeight(BuildContext context) => isWide(context)
+    ? backdropHeight(context)
+    : MediaQuery.sizeOf(context).width * 9 / 16;
+
+/// Where a title's heading starts: on a phone the name just inside the
+/// backdrop's foot, never under the [ItemTopBar]; from a tablet's width up
+/// the poster, as other pages' [headingTop].
+double titleTop(BuildContext context) => isWide(context)
+    ? headingTop(context)
+    : math.max(
+        titleBackdropHeight(context) - 32,
+        MediaQuery.paddingOf(context).top + TopVeil.bar,
+      );
+
+/// How a title's page lays out its poster beside the rest from a tablet's
+/// width up, as the web's from its `sm` and `lg` widths: the poster's
+/// width, the gap after it, and how much lower than it the column starts,
+/// so the name sits at the foot of the backdrop. Null on a phone, which
+/// leaves the poster out.
+({double poster, double gap, double columnTop})? titleAside(
+  BuildContext context,
+) => switch (WidthClass.of(MediaQuery.sizeOf(context).width)) {
+  WidthClass.compact => null,
+  WidthClass.medium => (poster: 176, gap: 24, columnTop: 96),
+  WidthClass.expanded => (poster: 240, gap: 40, columnTop: 112),
+};
+
 /// Goes to [route] as the page above in the person's way here: back to it when
 /// it's the page before this one, else opened over this one.
 void goUp(BuildContext context, String route) {
@@ -108,7 +137,7 @@ class ItemTopBar extends StatelessWidget {
                   onPressed: onParent,
                   label: parent,
                   shape: KitRadius.pill,
-                  builder: (context, state) => Container(
+                  builder: (context, state) => PressFill(
                     height: 44,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
@@ -188,6 +217,12 @@ class PageState extends StatelessWidget {
 /// The page scrolling under its buttons, the sections [gap] apart. Once
 /// it scrolls, a [TopVeil] comes in behind the buttons and the status
 /// bar, so the text going under them doesn't show through.
+///
+/// Coming in over a spinner, it builds a section a frame, the first in
+/// view first, holding the spinner's [FadeSwitcher] until every section
+/// in view is built: building the page in one frame takes more than a
+/// frame at 120 Hz has, and the page fading in over another stutters. A
+/// [SectionGroup]'s sections count one a frame too.
 class TitleScaffold extends StatefulWidget {
   const TitleScaffold({
     super.key,
@@ -211,11 +246,63 @@ class _TitleScaffoldState extends State<TitleScaffold> {
   /// page has scrolled [TopVeil.travel].
   final _veil = ValueNotifier<double>(0);
 
+  /// How many sections are built while they're built one a frame, a
+  /// [SectionGroup]'s counted one by one, or null once all are.
+  int? _staged;
+
+  /// The last section the list built, to tell when the next would be out
+  /// of its reach.
+  int _lastBuilt = -1;
+
+  /// Lets the page fade in once its sections are built.
+  VoidCallback? _release;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_staged != null || _release != null) return;
+    _release = FadeSwitcher.hold(context);
+    if (_release != null) {
+      _staged = 1;
+      _afterFrame();
+    }
+  }
+
   @override
   void dispose() {
+    _release?.call();
     _veil.dispose();
     super.dispose();
   }
+
+  /// Where each of the list's sections starts in the count of sections,
+  /// a group's own counted one by one, and at the end the count of all.
+  List<int> _starts() {
+    final starts = [0];
+    for (final section in widget.sections) {
+      final count = section is SectionGroup ? section.sections.length : 1;
+      starts.add(starts.last + math.max(1, count));
+    }
+    return starts;
+  }
+
+  void _afterFrame() => WidgetsBinding.instance.addPostFrameCallback((_) {
+    final staged = _staged;
+    if (!mounted || staged == null) return;
+    final starts = _starts();
+    // The list's section that holds the one added last frame.
+    final last = starts.lastIndexWhere((start) => start <= staged - 1);
+    // That section was out of the list's reach, and so are all after it;
+    // or they're all in.
+    final done = _lastBuilt < last || staged >= starts.last;
+    setState(() => _staged = done ? null : staged + 1);
+    if (done) {
+      _release?.call();
+      _release = null;
+    } else {
+      _afterFrame();
+    }
+  });
 
   bool _scrolled(ScrollNotification notification) {
     if (notification.depth == 0) {
@@ -225,46 +312,99 @@ class _TitleScaffoldState extends State<TitleScaffold> {
   }
 
   @override
-  Widget build(BuildContext context) => ColoredBox(
-    color: MatineeTheme.of(context).background,
-    child: Stack(
-      children: [
-        Positioned.fill(
-          child: NotificationListener<ScrollNotification>(
-            onNotification: _scrolled,
-            child: MediaQuery.removePadding(
-              context: context,
-              removeTop: true,
-              child: ListView.separated(
-                padding: EdgeInsets.only(
-                  bottom: 32 + MediaQuery.paddingOf(context).bottom,
+  Widget build(BuildContext context) {
+    final starts = _starts();
+    final staged = _staged;
+    return ColoredBox(
+      color: MatineeTheme.of(context).background,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _scrolled,
+              child: MediaQuery.removePadding(
+                context: context,
+                removeTop: true,
+                child: ListView.separated(
+                  padding: EdgeInsets.only(
+                    bottom: 32 + MediaQuery.paddingOf(context).bottom,
+                  ),
+                  itemCount: staged == null || staged >= starts.last
+                      ? widget.sections.length
+                      : starts.indexWhere((start) => start >= staged, 1),
+                  separatorBuilder: (context, index) =>
+                      SizedBox(height: widget.gap),
+                  itemBuilder: (context, index) {
+                    if (index > _lastBuilt) _lastBuilt = index;
+                    final section = widget.sections[index];
+                    if (section is! SectionGroup) return section;
+                    // Always in its scope, so the group keeps its state
+                    // when the last of it is built.
+                    return _GroupStage(
+                      shown: staged == null ? null : staged - starts[index],
+                      child: section,
+                    );
+                  },
                 ),
-                itemCount: widget.sections.length,
-                separatorBuilder: (context, index) =>
-                    SizedBox(height: widget.gap),
-                itemBuilder: (context, index) => widget.sections[index],
               ),
             ),
           ),
-        ),
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: IgnorePointer(
-            child: ValueListenableBuilder(
-              valueListenable: _veil,
-              builder: (context, shown, child) => shown == 0
-                  ? const SizedBox.shrink()
-                  : Opacity(opacity: shown, child: child),
-              child: const TopVeil(),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: ValueListenableBuilder(
+                valueListenable: _veil,
+                builder: (context, shown, child) => shown == 0
+                    ? const SizedBox.shrink()
+                    : Opacity(opacity: shown, child: child),
+                child: const TopVeil(),
+              ),
             ),
           ),
-        ),
-        ItemTopBar(parent: widget.parent, onParent: widget.onParent),
-      ],
-    ),
-  );
+          ItemTopBar(parent: widget.parent, onParent: widget.onParent),
+        ],
+      ),
+    );
+  }
+}
+
+/// Sections a page lays out together, as the column beside a title's
+/// poster, that [TitleScaffold] still builds one a frame: [builder] gets
+/// those built so far, in order, and lays them out.
+class SectionGroup extends StatelessWidget {
+  const SectionGroup({
+    super.key,
+    required this.sections,
+    required this.builder,
+  });
+
+  final List<Widget> sections;
+  final Widget Function(BuildContext context, List<Widget> sections) builder;
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = context
+        .dependOnInheritedWidgetOfExactType<_GroupStage>()
+        ?.shown;
+    return builder(
+      context,
+      shown == null || shown >= sections.length
+          ? sections
+          : sections.sublist(0, math.max(0, shown)),
+    );
+  }
+}
+
+/// How many of a [SectionGroup]'s sections are built, or null for all.
+class _GroupStage extends InheritedWidget {
+  const _GroupStage({required this.shown, required super.child});
+
+  final int? shown;
+
+  @override
+  bool updateShouldNotify(_GroupStage oldWidget) => shown != oldWidget.shown;
 }
 
 /// The page's colour behind the status bar and the [ItemTopBar], solid as
@@ -326,6 +466,7 @@ class Backdrop extends StatelessWidget {
     required this.toneKey,
     required this.top,
     required this.child,
+    this.height,
   });
 
   final List<PictureSource> sources;
@@ -333,10 +474,13 @@ class Backdrop extends StatelessWidget {
   final double top;
   final Widget child;
 
+  /// How tall the art is; [backdropHeight] when null.
+  final double? height;
+
   @override
   Widget build(BuildContext context) {
     final background = MatineeTheme.of(context).background;
-    final height = backdropHeight(context);
+    final height = this.height ?? backdropHeight(context);
     return Stack(
       children: [
         SizedBox(
@@ -424,27 +568,47 @@ TextStyle headlineStyle(KitColors colors) => KitText.xxxl
     .copyWith(letterSpacing: KitText.xxxl.size * -.025);
 
 /// Names in a run, each a link: "A, B and C".
+///
+/// With [limit], only so many are named and "2 more" ends the run; without
+/// [and], the run is commas only, as the web lists units: "A, B, C".
 class LinkedNames extends StatelessWidget {
   const LinkedNames({
     super.key,
     required this.names,
     required this.onPressed,
     this.color,
+    this.weight = FontWeight.w400,
+    this.limit,
+    this.and = true,
   });
 
   final List<String> names;
   final void Function(String name) onPressed;
   final Color? color;
+  final FontWeight weight;
+  final int? limit;
+  final bool and;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
-    final style = KitText.sm.style(color: color ?? colors.foreground);
+    final style = KitText.sm.style(
+      color: color ?? colors.foreground,
+      weight: weight,
+    );
     final quiet = KitText.sm.style(color: colors.mutedForeground);
+    final limit = this.limit;
+    final shown = limit == null || names.length <= limit
+        ? names
+        : names.sublist(0, limit);
+    final rest = names.length - shown.length;
+    final count = shown.length + (rest > 0 ? 1 : 0);
+    String separator(int index) =>
+        and && index == count - 2 ? ' ${l.commonAnd} ' : ', ';
     return Wrap(
       children: [
-        for (final (index, name) in names.indexed) ...[
+        for (final (index, name) in shown.indexed) ...[
           PressIndication(
             onPressed: () => onPressed(name),
             label: name,
@@ -458,14 +622,10 @@ class LinkedNames extends StatelessWidget {
               ),
             ),
           ),
-          if (index < names.length - 1)
-            ExcludeSemantics(
-              child: Text(
-                index == names.length - 2 ? ' ${l.commonAnd} ' : ', ',
-                style: quiet,
-              ),
-            ),
+          if (index < count - 1)
+            ExcludeSemantics(child: Text(separator(index), style: quiet)),
         ],
+        if (rest > 0) Text(l.webPeopleMore(rest), style: style),
       ],
     );
   }
@@ -505,11 +665,18 @@ class CreditLine extends StatelessWidget {
 /// An overview cut to [lines], with More to read the rest and Less to
 /// fold it again, the [tagline] over it.
 class Overview extends StatefulWidget {
-  const Overview({super.key, required this.text, this.tagline, this.lines = 3});
+  const Overview({
+    super.key,
+    required this.text,
+    this.tagline,
+    this.lines = 3,
+    this.padding = const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
+  });
 
   final String text;
   final String? tagline;
   final int lines;
+  final EdgeInsetsGeometry padding;
 
   @override
   State<Overview> createState() => _OverviewState();
@@ -542,7 +709,7 @@ class _OverviewState extends State<Overview> {
       ],
     );
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
+      padding: widget.padding,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final painter = TextPainter(
@@ -565,7 +732,14 @@ class _OverviewState extends State<Overview> {
             builder: (context, state) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                text,
+                // Opens and closes to its new height, as Findroid's
+                // overview does with animateContentSize.
+                AnimatedSize(
+                  duration: KitMotion.of(context, KitMotion.move),
+                  curve: KitMotion.easing,
+                  alignment: AlignmentDirectional.topStart,
+                  child: text,
+                ),
                 ExcludeSemantics(
                   child: Text(
                     _open ? l.titleLess : l.titleMore,
@@ -908,82 +1082,307 @@ class ScoreMark extends StatelessWidget {
   }
 }
 
-/// A title's name and facts, its poster beside them when [poster] says, as
-/// the web's title header.
+/// A title's name, its original name when that differs, and its facts, as
+/// the web's title header. A phone gives the name three lines at most.
 class TitleHeading extends StatelessWidget {
-  const TitleHeading({
-    super.key,
-    required this.title,
-    this.flags = const [],
-    this.poster = true,
-  });
+  const TitleHeading({super.key, required this.title, this.flags = const []});
 
   final Title title;
   final List<String> flags;
-  final bool poster;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     final original = title.originalName;
+    final wide = isWide(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        spacing: 16,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (poster)
-            HeadingPoster(
-              name: title.name,
-              toneKey: title.id,
-              art: title.images.poster,
+          Semantics(
+            header: true,
+            child: Text(
+              title.name,
+              maxLines: wide ? null : 3,
+              overflow: wide ? null : TextOverflow.ellipsis,
+              style: headlineStyle(colors),
             ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Semantics(
-                    header: true,
-                    child: Text(
-                      title.name,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: headlineStyle(colors),
-                    ),
-                  ),
-                  if (original != null && original != title.name)
-                    Text(
-                      original,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: KitText.base.style(color: colors.mutedForeground),
-                    ),
-                  const SizedBox(height: 8),
-                  HeadingFacts(
-                    facts: titleFacts(title, l),
-                    contentRating: title.contentRating,
-                    rating: title.rating,
-                    flags: flags,
-                  ),
-                  if (title.genres.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    LinkedNames(
-                      names: title.genres,
-                      color: colors.mutedForeground,
-                      onPressed: (genre) =>
-                          context.push(Routes.browse(genre: genre)),
-                    ),
-                  ],
-                ],
+          ),
+          if (original != null && original != title.name)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                original,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: (wide ? KitText.sm : KitText.base).style(
+                  color: colors.mutedForeground,
+                ),
               ),
             ),
+          const SizedBox(height: 8),
+          HeadingFacts(
+            facts: titleFacts(title, l),
+            contentRating: title.contentRating,
+            rating: title.rating,
+            flags: flags,
           ),
         ],
       ),
     );
+  }
+}
+
+/// A title's page from a tablet's width up, as the web's: the backdrop,
+/// a large poster on it, and beside the poster [sections], from the
+/// heading down, starting lower so the name sits at the backdrop's foot.
+/// The scaffold builds them one a frame as it would the page's own.
+class TitleAside extends StatelessWidget {
+  const TitleAside({
+    super.key,
+    required this.title,
+    required this.sources,
+    required this.sections,
+  });
+
+  final Title title;
+  final List<PictureSource> sources;
+  final List<Widget> sections;
+
+  @override
+  Widget build(BuildContext context) => SectionGroup(
+    sections: sections,
+    builder: (context, shown) {
+      final aside = titleAside(context);
+      final poster = title.images.poster;
+      return Backdrop(
+        sources: sources,
+        toneKey: title.id,
+        top: titleTop(context),
+        child: Padding(
+          // Each section keeps the gutter on both sides, so the row only
+          // adds the one before the poster.
+          padding: const EdgeInsetsDirectional.only(start: CardMetrics.gutter),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (aside != null) ...[
+                SizedBox(
+                  width: aside.poster,
+                  child: ArtFrame(
+                    toneKey: title.id,
+                    aspectRatio: CardMetrics.poster,
+                    children: [
+                      if (poster != null) Picture([ArtSource(poster)]),
+                    ],
+                  ),
+                ),
+                SizedBox(width: aside.gap - CardMetrics.gutter),
+              ],
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(top: aside?.columnTop ?? 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    spacing: 20,
+                    children: shown,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// The overview cut at six lines and the [TitleDetails] under it, or
+/// beside it once the column has the room, as the web's from its `xl`
+/// width.
+class OverviewDetails extends StatelessWidget {
+  const OverviewDetails({super.key, required this.title});
+
+  final Title title;
+
+  /// How wide the column is before the details go beside the overview:
+  /// the web's at its `xl` width, the poster at its largest beside it.
+  static const besideWidth = 880.0;
+
+  /// How wide the details are beside the overview.
+  static const detailsWidth = 320.0;
+
+  /// Whether there's either to show.
+  static bool any(Title title) =>
+      title.overview != null || TitleDetails.any(title);
+
+  @override
+  Widget build(BuildContext context) {
+    final overview = title.overview;
+    final text = overview == null
+        ? null
+        : Overview(
+            text: overview,
+            tagline: title.tagline,
+            lines: 6,
+            padding: EdgeInsets.zero,
+          );
+    final details = TitleDetails.any(title)
+        ? TitleDetails(title: title, padding: EdgeInsets.zero)
+        : null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (text != null &&
+              details != null &&
+              constraints.maxWidth >= besideWidth) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 40,
+              children: [
+                Expanded(child: text),
+                SizedBox(width: detailsWidth, child: details),
+              ],
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 20,
+            children: [?text, ?details],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// What the provider knows beyond the overview, a label and its value a
+/// row, as the web's `TitleDetails`: the genres, each opening its page,
+/// the crew, each opening theirs, the studios, and the day it came out.
+/// Rows without a value are left out, and the table when all are.
+class TitleDetails extends StatelessWidget {
+  const TitleDetails({
+    super.key,
+    required this.title,
+    this.padding = const EdgeInsets.symmetric(horizontal: CardMetrics.gutter),
+  });
+
+  final Title title;
+  final EdgeInsetsGeometry padding;
+
+  /// The crew it names, in the web's order.
+  static const crewKinds = [
+    CreditKind.creator,
+    CreditKind.director,
+    CreditKind.writer,
+  ];
+
+  /// How many of a kind of crew it names before "2 more".
+  static const crewNamed = 3;
+
+  /// Whether it has a row to show.
+  static bool any(Title title) =>
+      title.genres.isNotEmpty ||
+      title.studios.isNotEmpty ||
+      title.releaseDate != null ||
+      title.credits.any((credit) => crewKinds.contains(credit.kind));
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final colors = MatineeTheme.of(context);
+    final value = colors.foreground.withValues(alpha: .9);
+    final released = formatDay(title.releaseDate, l);
+    final rows = <(String, Widget)>[
+      if (title.genres.isNotEmpty)
+        (
+          l.webTitleDetailsGenres(title.genres.length),
+          LinkedNames(
+            names: title.genres,
+            color: value,
+            weight: FontWeight.w500,
+            and: false,
+            onPressed: (genre) => context.push(Routes.browse(genre: genre)),
+          ),
+        ),
+      for (final kind in crewKinds)
+        if (_people(kind) case final people when people.isNotEmpty)
+          (
+            switch (kind) {
+              CreditKind.creator => l.peopleCreditCreator(people.length),
+              CreditKind.director => l.peopleCreditDirector(people.length),
+              _ => l.peopleCreditWriter(people.length),
+            },
+            LinkedNames(
+              names: [for (final person in people) person.name],
+              color: value,
+              weight: FontWeight.w500,
+              limit: crewNamed,
+              onPressed: (name) => context.push(
+                Routes.person(
+                  name,
+                  tmdbId: people.firstWhere((p) => p.name == name).tmdbId,
+                ),
+              ),
+            ),
+          ),
+      if (title.studios.isNotEmpty)
+        (
+          l.peopleStudio(title.studios.length),
+          LinkedNames(
+            names: title.studios,
+            color: value,
+            weight: FontWeight.w500,
+            onPressed: (name) => context.push(Routes.browse(studio: name)),
+          ),
+        ),
+      if (released != null)
+        (
+          l.webTitleDetailsReleased,
+          Text(
+            released,
+            style: KitText.sm.style(color: value, weight: FontWeight.w500),
+          ),
+        ),
+    ];
+    if (rows.isEmpty) return const SizedBox.shrink();
+    final label = KitText.sm.style(color: colors.mutedForeground);
+    return Padding(
+      padding: padding,
+      child: Table(
+        columnWidths: const {0: IntrinsicColumnWidth(), 1: FlexColumnWidth()},
+        children: [
+          for (final (index, (name, content)) in rows.indexed)
+            TableRow(
+              children: [
+                Padding(
+                  padding: EdgeInsetsDirectional.only(
+                    end: 24,
+                    top: index == 0 ? 0 : 6,
+                  ),
+                  child: Text(name, style: label),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(top: index == 0 ? 0 : 6),
+                  child: content,
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// The people credited as [kind], each once.
+  List<Credit> _people(String kind) {
+    final seen = <String>{};
+    return [
+      for (final credit in title.credits)
+        if (credit.kind == kind && seen.add(credit.name)) credit,
+    ];
   }
 }
 
@@ -1172,7 +1571,7 @@ class _FileChoice extends StatelessWidget {
       selected: selected,
       inMutuallyExclusiveGroup: true,
       shape: KitRadius.control,
-      builder: (context, state) => DecoratedBox(
+      builder: (context, state) => PressFill(
         decoration: BoxDecoration(
           borderRadius: KitRadius.control,
           color: state == PressState.idle

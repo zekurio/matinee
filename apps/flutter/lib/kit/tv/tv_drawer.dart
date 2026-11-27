@@ -99,7 +99,7 @@ class TvDrawer extends StatelessWidget {
         final open = controller.isOpen;
         return TweenAnimationBuilder<double>(
           tween: Tween(end: open ? 1 : 0),
-          duration: open ? KitMotion.enter : KitMotion.exit,
+          duration: open ? TvMotion.enter : TvMotion.exit,
           builder: (context, shade, child) => CustomPaint(
             painter: _Shade(colors.background, shade),
             child: child,
@@ -113,8 +113,8 @@ class TvDrawer extends StatelessWidget {
                 bottom: Overscan.vertical,
               ),
               child: AnimatedContainer(
-                duration: KitMotion.move,
-                curve: KitMotion.easing,
+                duration: TvMotion.move,
+                curve: TvMotion.easing,
                 width: open ? _expanded : _railIcon,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -227,7 +227,7 @@ class _Entry extends StatelessWidget {
                         // ahead of the width as it closes, and gone after.
                         child: TweenAnimationBuilder<double>(
                           tween: Tween(end: open ? 1 : 0),
-                          duration: open ? Duration.zero : KitMotion.exit,
+                          duration: open ? Duration.zero : TvMotion.exit,
                           builder: (context, shown, label) => shown == 0
                               ? const SizedBox.shrink()
                               : Opacity(opacity: shown, child: label),

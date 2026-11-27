@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 
 import 'icon.dart';
-import 'motion.dart';
 import 'press_indication.dart';
+import 'staggered.dart';
 import 'theme.dart';
 import 'tokens.dart';
 import 'tone.dart';
@@ -222,6 +222,10 @@ class CardText extends StatelessWidget {
   static double height(TextScaler scaler) =>
       8 + _line(scaler, KitText.sm) + _line(scaler, KitText.px13) + 1;
 
+  /// A box as tall as it is with both lines, to hold its place.
+  static Widget placeholder(BuildContext context) =>
+      SizedBox(height: height(MediaQuery.textScalerOf(context)));
+
   /// A line's height, rounded up to the whole pixel the text lays out in:
   /// at a text size like 130%, a 16 tall line is 20.8, and two of them
   /// would run past a box sized for exactly that.
@@ -296,7 +300,9 @@ class CardText extends StatelessWidget {
   }
 }
 
-/// What a press looks like over a card's art: the foreground washed over it.
+/// What a press looks like over a card's art: the foreground washed over it,
+/// as a translucent fill rather than an opacity, so a card fading it paints
+/// no layer of its own.
 class _PressWash extends StatelessWidget {
   const _PressWash(this.state);
 
@@ -304,16 +310,16 @@ class _PressWash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final opacity = switch (state) {
+    final alpha = switch (state) {
       PressState.pressed => .1,
       PressState.hovered => .06,
       _ => 0.0,
     };
     return IgnorePointer(
-      child: AnimatedOpacity(
-        opacity: opacity,
-        duration: KitMotion.of(context, KitMotion.color),
-        child: ColoredBox(color: MatineeTheme.of(context).foreground),
+      child: SizedBox.expand(
+        child: PressFill(
+          color: MatineeTheme.of(context).foreground.withValues(alpha: alpha),
+        ),
       ),
     );
   }
@@ -425,7 +431,11 @@ class PosterCard extends StatelessWidget {
                     ),
                   ),
                 if (art != null)
-                  absentLabel == null ? art : Opacity(opacity: .35, child: art),
+                  StaggeredPart(
+                    child: absentLabel == null
+                        ? art
+                        : Opacity(opacity: .35, child: art),
+                  ),
                 if (mark != null)
                   PositionedDirectional(top: 6, end: 6, child: mark),
                 _PressWash(state),
@@ -433,10 +443,13 @@ class PosterCard extends StatelessWidget {
             ),
           ),
           ExcludeSemantics(
-            child: CardText(
-              primary: name,
-              secondary: detail,
-              secondaryIcon: detailIcon,
+            child: StaggeredPart(
+              placeholder: CardText.placeholder(context),
+              child: CardText(
+                primary: name,
+                secondary: detail,
+                secondaryIcon: detailIcon,
+              ),
             ),
           ),
         ],
@@ -520,7 +533,7 @@ class WideCard extends StatelessWidget {
                     color: colors.mutedForeground.withValues(alpha: .4),
                   ),
                 ),
-                ?art,
+                if (art != null) StaggeredPart(child: art),
                 if (watched != null)
                   PositionedDirectional(
                     top: 6,
@@ -543,11 +556,14 @@ class WideCard extends StatelessWidget {
             ),
           ),
           ExcludeSemantics(
-            child: CardText(
-              primary: name,
-              secondary: detail,
-              score: score,
-              untitled: untitled,
+            child: StaggeredPart(
+              placeholder: CardText.placeholder(context),
+              child: CardText(
+                primary: name,
+                secondary: detail,
+                score: score,
+                untitled: untitled,
+              ),
             ),
           ),
         ],
@@ -574,7 +590,7 @@ class PlayGlyph extends StatelessWidget {
     onPressed: onPressed,
     label: label,
     shape: KitRadius.pill,
-    builder: (context, state) => Container(
+    builder: (context, state) => PressFill(
       width: size,
       height: size,
       alignment: Alignment.center,

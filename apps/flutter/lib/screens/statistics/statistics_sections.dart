@@ -164,7 +164,7 @@ class _NowPlayingRow extends StatelessWidget {
         ? row
         : PressIndication(
             onPressed: () => context.push(Routes.title(target.id)),
-            builder: (context, state) => ColoredBox(
+            builder: (context, state) => PressFill(
               color: MatineeTheme.of(context).foreground
                   .withValues(alpha: state == PressState.idle ? 0 : .06),
               child: row,

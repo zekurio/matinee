@@ -359,7 +359,7 @@ class _CardRow extends StatelessWidget {
     final colors = MatineeTheme.of(context);
     return PressIndication(
       onPressed: onPressed,
-      builder: (context, state) => ColoredBox(
+      builder: (context, state) => PressFill(
         color: colors.foreground.withValues(
           alpha: state == PressState.idle ? 0 : .06,
         ),

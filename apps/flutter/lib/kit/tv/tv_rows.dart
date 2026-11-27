@@ -417,12 +417,12 @@ class _TvPosterGridState extends State<TvPosterGrid> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AnimatedSize(
-          duration: shown ? KitMotion.enter : KitMotion.exit,
-          curve: shown ? KitMotion.easing : KitMotion.exitEasing,
+          duration: shown ? TvMotion.enter : TvMotion.exit,
+          curve: shown ? TvMotion.easing : TvMotion.exitEasing,
           alignment: Alignment.topCenter,
           child: AnimatedOpacity(
             opacity: shown ? 1 : 0,
-            duration: shown ? KitMotion.enter : KitMotion.exit,
+            duration: shown ? TvMotion.enter : TvMotion.exit,
             child: shown && header != null
                 ? Focus(
                     canRequestFocus: false,
@@ -440,8 +440,8 @@ class _TvPosterGridState extends State<TvPosterGrid> {
         ),
         if (line != null || !shown)
           AnimatedPadding(
-            duration: KitMotion.enter,
-            curve: KitMotion.easing,
+            duration: TvMotion.enter,
+            curve: TvMotion.easing,
             padding: EdgeInsetsDirectional.only(
               start: TvPage.start,
               end: shown ? TvPage.end : TvPage.end + TvGrid.clockRoom,

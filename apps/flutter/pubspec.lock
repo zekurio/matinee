@@ -899,7 +899,7 @@ packages:
     source: hosted
     version: "1.2.0"
   vector_graphics_compiler:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: vector_graphics_compiler
       sha256: "7d3d604c1ede26711f865f74e9273c5c5504ac449f3d92faa722878dbac88807"

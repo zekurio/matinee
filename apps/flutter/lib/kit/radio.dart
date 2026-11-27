@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'motion.dart';
 import 'press_indication.dart';
 import 'theme.dart';
 import 'tokens.dart';
@@ -35,7 +36,7 @@ class RadioRow extends StatelessWidget {
       inMutuallyExclusiveGroup: true,
       label: [label, ?detail].join(', '),
       shape: KitRadius.control,
-      builder: (context, state) => DecoratedBox(
+      builder: (context, state) => PressFill(
         decoration: BoxDecoration(
           borderRadius: KitRadius.control,
           color: colors.foreground.withValues(
@@ -54,7 +55,7 @@ class RadioRow extends StatelessWidget {
               child: Row(
                 spacing: 14,
                 children: [
-                  Container(
+                  PressFill(
                     width: 18,
                     height: 18,
                     alignment: Alignment.center,
@@ -65,16 +66,20 @@ class RadioRow extends StatelessWidget {
                         width: selected ? 1.5 : 1,
                       ),
                     ),
-                    child: selected
-                        ? Container(
-                            width: 9,
-                            height: 9,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: colors.accent,
-                            ),
-                          )
-                        : null,
+                    // The dot grows in when it's picked, and shrinks away.
+                    child: AnimatedScale(
+                      scale: selected ? 1 : 0,
+                      duration: KitMotion.of(context, KitMotion.enter),
+                      curve: KitMotion.easing,
+                      child: Container(
+                        width: 9,
+                        height: 9,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: colors.accent,
+                        ),
+                      ),
+                    ),
                   ),
                   Expanded(
                     child: Column(

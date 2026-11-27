@@ -317,9 +317,10 @@ List<RouteBase> _authRoutes({required bool tv}) => [
   ),
 ];
 
-/// A page a phone or tablet opens over another, from [builder]: it slides
+/// A page a phone or tablet opens over another, from [builder]: it comes
 /// in as the theme says, Cupertino's slide with the swipe back from the
-/// edge on iOS, and on Android the theme's transition with predictive Back.
+/// edge on iOS, and on Android the kit's, which fades it in over the page
+/// below and out again.
 ///
 /// Not left to go_router's `builder`: since 18 it picks the page by finding
 /// `material_ui`'s `MaterialApp`, doesn't see this app's, and gives every
@@ -359,37 +360,22 @@ GoRoute _authRoute(String path, Widget screen) => GoRoute(
 /// of a place takes another's: a sign-in step for the next, or the app for
 /// the sign-in once the session is there.
 Page<void> _fadePage(GoRouterState state, Widget child) =>
-    CustomTransitionPage<void>(
-      key: state.pageKey,
-      name: state.name ?? state.path,
-      transitionDuration: KitMotion.enter,
-      reverseTransitionDuration: KitMotion.exit,
-      transitionsBuilder: (context, animation, secondary, child) =>
-          MediaQuery.disableAnimationsOf(context)
-          ? child
-          : FadeTransition(
-              opacity: animation.drive(CurveTween(curve: KitMotion.easing)),
-              child: child,
-            ),
-      child: child,
-    );
+    FadePage(key: state.pageKey, name: state.name ?? state.path, child: child);
 
 /// The tabs, each with its own stack, and the pages that open over them. Pages
 /// open over the tabs, on the root navigator: a title page fills the screen
-/// without the bars.
+/// without the bars. The tabs fade into each other ([HandsetTabs]), every
+/// one kept as it was left.
 List<RouteBase> _handsetRoutes() => [
-  StatefulShellRoute.indexedStack(
+  StatefulShellRoute(
     pageBuilder: (context, state, shell) =>
         _fadePage(state, HandsetShell(shell: shell)),
+    navigatorContainerBuilder: (context, shell, children) =>
+        HandsetTabs(shell: shell, children: children),
     branches: [
       StatefulShellBranch(
         routes: [
-          GoRoute(
-            path: Routes.home,
-            builder: (context, state) => HomeScreen(
-              links: [if (_hasPlayerLab) ('Player lab', Routes.playerLab)],
-            ),
-          ),
+          GoRoute(path: Routes.home, builder: (context, state) => _home),
         ],
       ),
       StatefulShellBranch(
@@ -671,6 +657,13 @@ bool get _hasPlayer =>
 
 bool get _hasPlayerLab => kDebugMode && _hasPlayer;
 
+/// One Home for every build of the tabs: go_router builds each tab's page
+/// again on every navigation, and a new Home built all of itself again in
+/// the first frame of a page opening or going back, or of a tab.
+final _home = HomeScreen(
+  links: [if (_hasPlayerLab) ('Player lab', Routes.playerLab)],
+);
+
 /// The TV's pages, under its drawer: the phone's paths, TV screens. The pages
 /// from the drawer sit over Home, so Back goes there; the rest open over
 /// whatever opened them. There's no downloads page, no admin page, no image
@@ -804,19 +797,19 @@ GoRoute _tv(
   routes: routes,
   pageBuilder: (context, state) => CustomTransitionPage<void>(
     key: state.pageKey,
-    transitionDuration: KitMotion.enter + KitMotion.exit,
-    reverseTransitionDuration: KitMotion.enter + KitMotion.exit,
+    transitionDuration: TvMotion.enter + TvMotion.exit,
+    reverseTransitionDuration: TvMotion.enter + TvMotion.exit,
     transitionsBuilder: (context, animation, secondary, child) =>
         FadeTransition(
           opacity: CurvedAnimation(
             parent: animation,
-            curve: const Interval(.4, 1, curve: KitMotion.easing),
+            curve: const Interval(.4, 1, curve: TvMotion.easing),
           ),
           child: FadeTransition(
             opacity: Tween<double>(begin: 1, end: 0).animate(
               CurvedAnimation(
                 parent: secondary,
-                curve: const Interval(0, .4, curve: KitMotion.exitEasing),
+                curve: const Interval(0, .4, curve: TvMotion.exitEasing),
               ),
             ),
             child: child,
