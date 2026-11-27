@@ -1,6 +1,7 @@
 import type { User } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
 import { Dynamic, type JSX } from "@solidjs/web"
+import { useQueryClient } from "@tanstack/solid-query"
 import { ArrowLeft, LogOut, Search, X } from "lucide"
 import { createMemo, createSignal, For, onSettled, Show } from "solid-js"
 
@@ -11,6 +12,7 @@ import { Icon } from "@/kit/icon"
 import { Input } from "@/kit/input"
 import { List, ListItemButton } from "@/kit/list"
 import { ScrollArea } from "@/kit/scroll-area"
+import { pointerIntent } from "@/lib/pointer-intent"
 import type { SettingsTarget } from "@/lib/settings"
 import { useSignOut } from "@/lib/sign-out"
 import { mediaQuery } from "@/lib/viewport"
@@ -29,6 +31,27 @@ interface SettingsNavigation {
   onOpenSection: (section: SettingsTarget) => void
   /** Leave a section for the phone menu. */
   onBack: () => void
+}
+
+/** How long the pointer rests on a section's entry before its data loads, in ms. */
+const PREFETCH_AHEAD_MS = 50
+
+/**
+ * Loads a section's data before it opens: once the pointer rests on its
+ * entry, when focus reaches it, and on the press itself, which leaves a
+ * tap its own head start. Its panel then opens on what it shows instead of
+ * a skeleton that a moment later gives way to it.
+ */
+function usePrefetchSection(category: () => SettingsCategory) {
+  const queryClient = useQueryClient()
+  const load = () => category().prefetch?.(queryClient)
+  const pointed = pointerIntent(load, () => PREFETCH_AHEAD_MS)
+  return {
+    onPointerEnter: pointed.enter,
+    onPointerLeave: pointed.cancel,
+    onPointerDown: load,
+    onFocus: load,
+  }
 }
 
 /** Where the dialog turns into a full-screen sheet, as `md` ends. */
@@ -203,6 +226,7 @@ function SettingsOverview(props: {
                       when={item().category.id === "account"}
                       fallback={
                         <ListItemButton
+                          {...usePrefetchSection(() => item().category)}
                           onClick={() =>
                             props.onOpenSection(item().category.id)
                           }
@@ -223,6 +247,7 @@ function SettingsOverview(props: {
                       }
                     >
                       <ListItemButton
+                        {...usePrefetchSection(() => item().category)}
                         class="min-h-16"
                         onClick={() => props.onOpenSection(item().category.id)}
                       >
@@ -302,8 +327,10 @@ function SettingsSectionView(
                   {(item) => {
                     const isActive = () =>
                       item().category.id === props.active.id
+                    const prefetch = usePrefetchSection(() => item().category)
                     return (
                       <button
+                        {...prefetch}
                         type="button"
                         aria-current={isActive() ? "page" : undefined}
                         onClick={() => {

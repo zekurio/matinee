@@ -1,4 +1,5 @@
 import type { Permission, User } from "@matinee/contracts"
+import type { QueryClient } from "@tanstack/solid-query"
 import {
   Film,
   GalleryHorizontalEnd,
@@ -20,6 +21,7 @@ import { type Accessor, type Component, createMemo } from "solid-js"
 import { tr } from "@/i18n"
 import type { IconNode } from "@/kit/icon"
 import { can, canAny } from "@/lib/permissions"
+import { orpc } from "@/lib/rpc"
 import type { SettingsSectionId } from "@/lib/settings"
 
 import { AccessPanel } from "./access-panel"
@@ -49,6 +51,11 @@ export interface SettingsCategory {
   keywords: string[]
   icon: IconNode
   Panel: Component
+  /**
+   * Starts the queries the panel opens with, so a switch that finds them
+   * loaded shows the panel whole instead of a skeleton for a moment.
+   */
+  prefetch?: (queryClient: QueryClient) => void
 }
 
 const SETTINGS_GROUPS: readonly SettingsGroup[] = ["account", "admin"]
@@ -56,7 +63,7 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = ["account", "admin"]
 /** A section's place in the nav; its text comes from the catalog. */
 type SectionEntry = Pick<
   SettingsCategory,
-  "id" | "group" | "icon" | "Panel"
+  "id" | "group" | "icon" | "Panel" | "prefetch"
 > & {
   /**
    * The permissions that open the section: an account with any of them
@@ -73,7 +80,16 @@ type SectionEntry = Pick<
 }
 
 const SECTIONS: SectionEntry[] = [
-  { id: "account", group: "account", icon: UserRound, Panel: AccountPanel },
+  {
+    id: "account",
+    group: "account",
+    icon: UserRound,
+    Panel: AccountPanel,
+    prefetch: (queryClient) => {
+      void queryClient.prefetchQuery(orpc.account.passkeys.list.queryOptions())
+      void queryClient.prefetchQuery(orpc.account.sessions.list.queryOptions())
+    },
+  },
   {
     id: "appearance",
     group: "account",
@@ -85,6 +101,8 @@ const SECTIONS: SectionEntry[] = [
     group: "account",
     icon: TvMinimalPlay,
     Panel: PlaybackPanel,
+    prefetch: (queryClient) =>
+      void queryClient.prefetchQuery(orpc.playback.options.queryOptions()),
   },
   {
     // Every account, as one that may no longer make tokens still revokes
@@ -93,6 +111,10 @@ const SECTIONS: SectionEntry[] = [
     group: "account",
     icon: KeySquare,
     Panel: ApiTokensPanel,
+    prefetch: (queryClient) =>
+      void queryClient.prefetchQuery(
+        orpc.account.apiTokens.list.queryOptions(),
+      ),
   },
   {
     id: "libraries",
@@ -105,6 +127,10 @@ const SECTIONS: SectionEntry[] = [
     ],
     icon: LibraryBig,
     Panel: LibrariesPanel,
+    prefetch: (queryClient) => {
+      void queryClient.prefetchQuery(orpc.libraries.list.queryOptions())
+      void queryClient.prefetchQuery(orpc.metadata.providers.queryOptions())
+    },
   },
   {
     id: "users",
@@ -112,6 +138,8 @@ const SECTIONS: SectionEntry[] = [
     needs: ["adminUser.read"],
     icon: Users,
     Panel: UsersPanel,
+    prefetch: (queryClient) =>
+      void queryClient.prefetchQuery(orpc.admin.users.list.queryOptions()),
   },
   {
     id: "access",
@@ -119,6 +147,10 @@ const SECTIONS: SectionEntry[] = [
     needs: ["group.read"],
     icon: ShieldCheck,
     Panel: AccessPanel,
+    prefetch: (queryClient) => {
+      void queryClient.prefetchQuery(orpc.admin.groups.list.queryOptions())
+      void queryClient.prefetchQuery(orpc.libraries.list.queryOptions())
+    },
   },
   {
     id: "requests",
@@ -131,6 +163,14 @@ const SECTIONS: SectionEntry[] = [
     ],
     icon: Inbox,
     Panel: RequestsPanel,
+    prefetch: (queryClient) => {
+      void queryClient.prefetchQuery(
+        orpc.admin.fulfilment.sources.queryOptions(),
+      )
+      void queryClient.prefetchQuery(
+        orpc.admin.fulfilment.connections.queryOptions(),
+      )
+    },
   },
   {
     id: "authentication",
@@ -138,6 +178,8 @@ const SECTIONS: SectionEntry[] = [
     needs: ["all"],
     icon: KeyRound,
     Panel: AuthPanel,
+    prefetch: (queryClient) =>
+      void queryClient.prefetchQuery(orpc.admin.auth.get.queryOptions()),
   },
   {
     id: "transcoding",
@@ -145,6 +187,8 @@ const SECTIONS: SectionEntry[] = [
     needsAll: ["transcodingSettings.read", "transcodingSettings.update"],
     icon: Film,
     Panel: TranscodingPanel,
+    prefetch: (queryClient) =>
+      void queryClient.prefetchQuery(orpc.admin.transcoding.get.queryOptions()),
   },
   {
     id: "trickplay",
@@ -152,6 +196,8 @@ const SECTIONS: SectionEntry[] = [
     needsAll: ["trickplaySettings.read", "trickplaySettings.update"],
     icon: GalleryHorizontalEnd,
     Panel: TrickplayPanel,
+    prefetch: (queryClient) =>
+      void queryClient.prefetchQuery(orpc.admin.trickplay.get.queryOptions()),
   },
   {
     id: "network",
@@ -159,6 +205,8 @@ const SECTIONS: SectionEntry[] = [
     needsAll: ["networkSettings.read", "networkSettings.update"],
     icon: Network,
     Panel: NetworkPanel,
+    prefetch: (queryClient) =>
+      void queryClient.prefetchQuery(orpc.admin.network.get.queryOptions()),
   },
   {
     id: "jobs",
@@ -173,6 +221,8 @@ const SECTIONS: SectionEntry[] = [
     needsAll: ["branding.read", "branding.update"],
     icon: Paintbrush,
     Panel: BrandingPanel,
+    prefetch: (queryClient) =>
+      void queryClient.prefetchQuery(orpc.admin.branding.get.queryOptions()),
   },
 ]
 
@@ -184,6 +234,7 @@ function describe(section: SectionEntry): SettingsCategory {
     group: section.group,
     icon: section.icon,
     Panel: section.Panel,
+    prefetch: section.prefetch,
     label: tr(`settings.section.${section.id}.label`),
     description: tr(`settings.section.${section.id}.description`),
     keywords: keywords.split(",").map((word) => word.trim()),
