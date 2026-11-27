@@ -596,13 +596,15 @@ class TvSeekBar extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final colors = MatineeTheme.of(context);
     final length = duration < 0 ? 0.0 : duration;
-    final time = TvType.facts.style(
-      color: colors.foreground,
-      shadows: _onPicture,
-    );
+    final time = TvType.facts
+        .style(color: colors.foreground, shadows: _onPicture)
+        .copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
+    // Both times take the width of the longest this file can show, so the
+    // bar keeps its length as a time gains a digit, at 10:00 or 1:00:00.
+    final widest = formatClock(length).replaceAll(RegExp('[0-9]'), '0');
     return Row(
       children: [
-        Text(formatClock(position), style: time),
+        _Clock(formatClock(position), widest: widest, style: time),
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -628,14 +630,41 @@ class TvSeekBar extends StatelessWidget {
             ),
           ),
         ),
-        Text(
+        _Clock(
           formatClock(length),
-          textAlign: TextAlign.end,
+          widest: widest,
+          end: true,
           style: time.copyWith(color: colors.foreground.withValues(alpha: .75)),
         ),
       ],
     );
   }
+}
+
+/// A time beside the seek bar, as wide as [widest] whatever it reads.
+class _Clock extends StatelessWidget {
+  const _Clock(
+    this.text, {
+    required this.widest,
+    required this.style,
+    this.end = false,
+  });
+
+  final String text;
+  final String widest;
+  final TextStyle style;
+  final bool end;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    alignment: end ? Alignment.centerRight : Alignment.centerLeft,
+    children: [
+      ExcludeSemantics(
+        child: Opacity(opacity: 0, child: Text(widest, style: style)),
+      ),
+      Text(text, style: style),
+    ],
+  );
 }
 
 class _Track extends StatelessWidget {
