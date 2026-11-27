@@ -129,7 +129,7 @@ export function Askers(props: { item: AdminRequestItem }) {
             </span>
           </Link>
           <Show when={who().rest.length > 0}>
-            <span class="text-muted-foreground shrink-0 tabular-nums">
+            <span class="text-muted-foreground shrink-0">
               {tr("requests.othersCount", { count: who().rest.length })}
             </span>
           </Show>

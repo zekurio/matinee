@@ -355,8 +355,10 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
       display: none;
     }
   }
+  /* Every digit takes the same width, so a number that ticks, like a
+     countdown or a timestamp, doesn't resize what holds it. */
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground font-sans tabular-nums antialiased;
   }
   /* A thin, trackless scrollbar with no arrow buttons. Chrome ignores the
      ::-webkit-scrollbar rules once the standard properties are set, so those

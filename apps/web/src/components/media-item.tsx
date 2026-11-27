@@ -422,7 +422,7 @@ function ShowEpisodeText(props: { item: MediaItem }) {
       <Show
         when={episode()}
         fallback={
-          <span class="text-muted-foreground text-13px block truncate leading-5 tabular-nums">
+          <span class="text-muted-foreground text-13px block truncate leading-5">
             {left() ?? label().year}
           </span>
         }
@@ -438,9 +438,7 @@ function ShowEpisodeText(props: { item: MediaItem }) {
             </ItemLink>
             <Show when={left()}>
               {(time) => (
-                <span class="shrink-0 whitespace-pre tabular-nums">
-                  {` · ${time()}`}
-                </span>
+                <span class="shrink-0 whitespace-pre">{` · ${time()}`}</span>
               )}
             </Show>
           </span>
@@ -883,7 +881,7 @@ function EpisodeText(props: { item: MediaItem }) {
 export function EpisodeDetail(props: { detail: string; score: number | null }) {
   return (
     <Show when={props.detail || props.score !== null}>
-      <span class="text-muted-foreground text-13px flex min-w-0 items-center gap-2 leading-5 tabular-nums">
+      <span class="text-muted-foreground text-13px flex min-w-0 items-center gap-2 leading-5">
         <Show when={props.detail}>
           <span class="truncate">{props.detail}</span>
         </Show>

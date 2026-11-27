@@ -50,6 +50,8 @@ enum TvType {
     fontSize: size,
     height: lineHeight / size,
     fontWeight: weight,
+    // Same-width digits, so a ticking number doesn't resize its box.
+    fontFeatures: const [FontFeature.tabularFigures()],
     fontVariations: [FontVariation('wght', weight.value.toDouble())],
     letterSpacing: tracking * size,
     color: color,

@@ -141,7 +141,6 @@ object.player-video {
 .seek-clock {
   flex: none;
   min-width: 44rem;
-  font-variant-numeric: tabular-nums;
 }
 .seek-clock.end {
   text-align: right;
@@ -222,7 +221,6 @@ object.player-video {
   border-radius: 8rem;
   background: var(--fg);
   color: var(--bg);
-  font-variant-numeric: tabular-nums;
 }
 
 .trickplay {

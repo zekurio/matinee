@@ -211,7 +211,7 @@ export function QuotaInputs(props: {
           max={10000}
           aria-label={tr("access.requestLimit.titlesField")}
           value={props.value.titles ? String(props.value.titles) : ""}
-          class="w-16 tabular-nums"
+          class="w-16"
           onInput={(event) => change("titles", 10000, event.currentTarget)}
           onBlur={atLeastOne("titles")}
         />
@@ -228,7 +228,7 @@ export function QuotaInputs(props: {
           max={365}
           aria-label={tr("access.requestLimit.daysField")}
           value={props.value.days ? String(props.value.days) : ""}
-          class="w-16 tabular-nums"
+          class="w-16"
           onInput={(event) => change("days", 365, event.currentTarget)}
           onBlur={atLeastOne("days")}
         />

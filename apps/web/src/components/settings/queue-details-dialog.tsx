@@ -44,9 +44,7 @@ export function QueueDetailsDialog(props: {
           <DialogTitle class="text-lg leading-7 font-semibold">
             {queueName(props.queue)}
           </DialogTitle>
-          <DialogDescription class="tabular-nums">
-            {props.summary}
-          </DialogDescription>
+          <DialogDescription>{props.summary}</DialogDescription>
         </DialogHeader>
         <div class="-mx-6 flex min-h-0 flex-col gap-6 overflow-y-auto px-6">
           <Section title={tr("jobs.details.running")}>
@@ -171,9 +169,7 @@ function Job(props: {
           {props.detail}
         </p>
       </Show>
-      <p class="text-muted-foreground text-xs leading-4 tabular-nums">
-        {props.meta}
-      </p>
+      <p class="text-muted-foreground text-xs leading-4">{props.meta}</p>
     </div>
   )
 }

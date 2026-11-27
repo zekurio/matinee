@@ -558,7 +558,7 @@ function SlideWords(props: {
                 style={{ width: `${Math.min(100, (ratio() ?? 0) * 100)}%` }}
               />
             </span>
-            <span class="text-foreground/80 shrink-0 text-xs tabular-nums">
+            <span class="text-foreground/80 shrink-0 text-xs">
               {[episodeCode(props.slide.item), time()]
                 .filter((part) => part !== null)
                 .join(" · ")}

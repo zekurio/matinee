@@ -132,7 +132,7 @@ function StepperField(props: { form: Form<Draft>; queue: JobQueueStatus }) {
             id={ids.controlId}
             aria-invalid={typedValid() ? undefined : "true"}
             inputmode="numeric"
-            class="w-14 text-center tabular-nums"
+            class="w-14 text-center"
             value={typed() ?? String(value())}
             onInput={(event) => {
               const text = event.currentTarget.value.replace(/\D/g, "")

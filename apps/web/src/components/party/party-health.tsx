@@ -132,7 +132,7 @@ function HealthList(props: { party: PartyLink }) {
                   )}
                 </Show>
               </div>
-              <span class="flex shrink-0 items-center gap-1.5 text-xs font-medium tabular-nums">
+              <span class="flex shrink-0 items-center gap-1.5 text-xs font-medium">
                 <span
                   aria-hidden="true"
                   class={["size-2 rounded-full", TONES.get(verdict().tone)]}

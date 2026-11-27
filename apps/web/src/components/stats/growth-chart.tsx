@@ -147,14 +147,14 @@ export function GrowthChart(props: {
 
   return (
     <figure class={cn("flex min-w-0 flex-col gap-2", props.class)}>
-      <figcaption class="text-muted-foreground min-h-5 truncate text-xs leading-5 tabular-nums">
+      <figcaption class="text-muted-foreground min-h-5 truncate text-xs leading-5">
         <span class="text-foreground font-medium">{caption().name}</span>
         {` · ${caption().text}`}
       </figcaption>
       <div class="grid min-h-0 flex-1 grid-cols-[auto_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] gap-x-2 gap-y-2">
         <span
           aria-hidden="true"
-          class="text-muted-foreground text-11px flex flex-col items-end justify-between leading-none tabular-nums"
+          class="text-muted-foreground text-11px flex flex-col items-end justify-between leading-none"
         >
           <span class="-translate-y-1/2">{formatCount(chart().top)}</span>
           <Show when={chart().bottom > 0}>
@@ -219,7 +219,7 @@ export function GrowthChart(props: {
         </div>
         <div
           aria-hidden="true"
-          class="text-muted-foreground text-11px relative col-start-2 h-4 leading-4 tabular-nums"
+          class="text-muted-foreground text-11px relative col-start-2 h-4 leading-4"
         >
           <For each={chart().ticks}>
             {([index, tick]) => (

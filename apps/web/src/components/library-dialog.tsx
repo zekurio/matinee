@@ -351,7 +351,7 @@ function LibraryForm(props: { library?: Library; onDone: () => void }) {
               <div class="flex items-baseline justify-between">
                 <FieldLabel>{tr("libraries.dialog.folders")}</FieldLabel>
                 <Show when={values().paths.length > 0}>
-                  <span class="text-muted-foreground text-xs tabular-nums">
+                  <span class="text-muted-foreground text-xs">
                     {tr("libraries.dialog.selected", {
                       count: values().paths.length,
                     })}

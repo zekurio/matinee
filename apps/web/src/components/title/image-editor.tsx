@@ -597,9 +597,7 @@ function Choice(props: {
         </Show>
       </span>
       <Show when={text()}>
-        <span class="text-muted-foreground truncate text-xs tabular-nums">
-          {text()}
-        </span>
+        <span class="text-muted-foreground truncate text-xs">{text()}</span>
       </Show>
       <span class="sr-only">
         {props.inUse ? tr("title.images.inUse") : tr("title.images.use")}

@@ -275,9 +275,7 @@ export function PlayButton(props: { item: MediaItem }) {
       {tr(resume() ? "title.resume" : "title.play")}
       <Show when={resume() && timeLeft(props.item)}>
         {(left) => (
-          <span class="truncate font-normal tabular-nums opacity-70">
-            {left()}
-          </span>
+          <span class="truncate font-normal opacity-70">{left()}</span>
         )}
       </Show>
     </Link>

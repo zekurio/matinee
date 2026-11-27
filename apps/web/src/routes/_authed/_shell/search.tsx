@@ -319,7 +319,7 @@ function FacetText(props: { facet: Facet }) {
   return (
     <>
       <span class="truncate text-sm font-medium">{props.facet.name}</span>
-      <span class="text-muted-foreground text-xs tabular-nums">
+      <span class="text-muted-foreground text-xs">
         {formatCount(props.facet.titleCount)}
       </span>
     </>

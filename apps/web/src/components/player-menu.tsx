@@ -87,8 +87,7 @@ const sheetIconClass =
 const menuIconClass = "size-8 shrink-0 justify-center rounded-full p-0"
 
 // Wide enough for -10,0 s, so the plus doesn't move as the value does.
-const valueClass =
-  "h-8 min-w-16 justify-center rounded-full px-2 font-medium tabular-nums"
+const valueClass = "h-8 min-w-16 justify-center rounded-full px-2 font-medium"
 
 /** Keeps the menu open after an item runs. */
 function stayOpen(run: () => void) {
@@ -101,7 +100,7 @@ function stayOpen(run: () => void) {
 function Detail(props: { children?: string }) {
   return (
     <Show when={props.children}>
-      <span class="text-foreground/70 ml-auto pl-4 text-xs font-medium tabular-nums">
+      <span class="text-foreground/70 ml-auto pl-4 text-xs font-medium">
         {props.children}
       </span>
     </Show>
@@ -199,7 +198,7 @@ function SheetAdjustRow(props: { adjust: MenuAdjust }) {
               disabled={props.adjust.atStart}
               class={cn(
                 sheetIconClass,
-                "w-auto min-w-18 px-2 text-sm font-medium tabular-nums disabled:opacity-100",
+                "w-auto min-w-18 px-2 text-sm font-medium disabled:opacity-100",
                 props.adjust.atStart && "text-muted-foreground",
               )}
               onClick={() => props.adjust.reset.onSelect()}

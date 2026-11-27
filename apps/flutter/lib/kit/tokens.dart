@@ -134,6 +134,8 @@ enum KitText {
     fontSize: size,
     height: (leading ?? lineHeight) / size,
     fontWeight: weight,
+    // Same-width digits, so a ticking number doesn't resize its box.
+    fontFeatures: const [FontFeature.tabularFigures()],
     fontVariations: [FontVariation('wght', weight.value.toDouble())],
     color: color,
   );
