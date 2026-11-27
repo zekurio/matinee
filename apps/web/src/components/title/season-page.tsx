@@ -20,7 +20,7 @@ import {
 } from "@/components/media-item"
 import { useDocumentTitle } from "@/components/page-header"
 import { ItemTopBar, parentLink } from "@/components/phone-nav"
-import { Picture, tone } from "@/components/picture"
+import { Picture } from "@/components/picture"
 import { Rail, RailItem } from "@/components/rail"
 import {
   parseSeasonParam,
@@ -35,12 +35,19 @@ import { Skeleton } from "@/kit/skeleton"
 import { art, type ImageSource, present, seasonName } from "@/lib/media"
 import { errorMessage, orpc } from "@/lib/rpc"
 
-import { HeaderOverview } from "./header-overview"
 import { railStart } from "./rail-start"
 import { RestOfSeasonCard } from "./rest-of-season"
 import { Score } from "./score"
 import { useShowGaps } from "./show-gaps"
-import { PlayButton } from "./title-header"
+import { airedBetween, TitleDetails } from "./title-details"
+import {
+  DetailHero,
+  heroActions,
+  heroBody,
+  OverviewAndDetails,
+  PlayButton,
+  titlePoster,
+} from "./title-header"
 import { TitleSkeleton } from "./title-page"
 import { useTitle } from "./title-queries"
 
@@ -230,7 +237,9 @@ function SeasonContent(props: {
 
 /**
  * The top of a season's page, laid out as the show's: the show's backdrop,
- * the season's poster, the show's name over the season's, and Play.
+ * the season's poster, the show's name over the season's, Play, and the
+ * overview beside the show's genres, creators, and studios, and when the
+ * season aired.
  */
 function SeasonHeader(props: {
   title: Title
@@ -266,84 +275,82 @@ function SeasonHeader(props: {
     () => props.items,
   )
 
+  const aired = () =>
+    airedBetween(
+      props.items?.map((item) => item.episode?.airDate ?? null) ?? [],
+    )
+
   return (
-    <section aria-labelledby="season-name" class="isolate">
-      <HeaderBackdrop
-        toneKey={props.title.id}
-        backdrop={art(props.title.images.backdrop, "large")}
-        poster={art(poster())}
-      />
+    <DetailHero
+      labelledBy="season-name"
+      toneKey={props.title.id}
+      backdrop={present(art(props.title.images.backdrop, "large"))}
+      backdropFallback={<BlurredPoster poster={art(poster())} />}
+      artClass={titlePoster}
+      art={
+        <PosterArt
+          name={name()}
+          toneKey={props.title.id}
+          poster={art(poster())}
+        />
+      }
+    >
+      <p class={heroParent}>
+        <Link
+          to="/titles/$titleId"
+          params={{ titleId: props.title.id }}
+          class={headingLink}
+        >
+          {props.title.name}
+        </Link>
+      </p>
+      <h1
+        id="season-name"
+        class="mt-1 text-2xl leading-[1.1] font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl"
+      >
+        {seasonName(props.season.number)}
+      </h1>
 
-      <div class="pt-[max(7rem,20vh)] sm:pt-[max(8rem,14vh)]">
-        <div class={headerRow}>
-          <HeaderPoster
-            name={name()}
-            toneKey={props.title.id}
-            poster={art(poster())}
-          />
-
-          <div class="contents sm:flex sm:min-w-0 sm:flex-1 sm:flex-col">
-            <div class="min-w-0">
-              {/* The negative margin sets the letters, not the line box,
-                  level with the poster's top. */}
-              <p class="-mt-1 text-lg leading-7 font-semibold tracking-tight text-balance sm:text-2xl sm:leading-8">
-                <Link
-                  to="/titles/$titleId"
-                  params={{ titleId: props.title.id }}
-                  class={headingLink}
-                >
-                  {props.title.name}
-                </Link>
-              </p>
-              <h1
-                id="season-name"
-                class="mt-1 text-2xl leading-[1.1] font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl"
-              >
-                {seasonName(props.season.number)}
-              </h1>
-
-              <div class="text-foreground/80 mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm tabular-nums">
-                <span>{facts()}</span>
-                <Show when={props.title.contentRating}>
-                  <span class="border-foreground/25 rounded border px-1.5 text-xs leading-5">
-                    {props.title.contentRating}
-                  </span>
-                </Show>
-                <Score score={props.season.rating} />
-              </div>
-            </div>
-
-            <div class="col-span-2 min-w-0 sm:flex sm:flex-1 sm:flex-col">
-              <div class="sm:mt-4">
-                <HeaderOverview
-                  tagline={null}
-                  overview={props.season.overview}
-                />
-              </div>
-
-              <div class="flex items-center gap-2 pt-6 sm:mt-auto">
-                <Show when={next()}>
-                  {(item) => <PlayButton item={item()} />}
-                </Show>
-                <WatchedButton watched={watched} />
-                <SeasonFavoriteButton
-                  title={props.title}
-                  season={props.season}
-                />
-                <ActionsMenu
-                  target={{
-                    kind: "season",
-                    title: props.title,
-                    season: props.season,
-                  }}
-                  look="page"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="text-foreground/80 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm tabular-nums">
+        <span>{facts()}</span>
+        <Show when={props.title.contentRating}>
+          <span class="border-foreground/25 rounded border px-1.5 text-xs leading-5">
+            {props.title.contentRating}
+          </span>
+        </Show>
+        <Score score={props.season.rating} />
       </div>
-    </section>
+
+      <div class={heroActions}>
+        <Show when={next()}>{(item) => <PlayButton item={item()} />}</Show>
+        <WatchedButton watched={watched} />
+        <SeasonFavoriteButton title={props.title} season={props.season} />
+        <ActionsMenu
+          target={{
+            kind: "season",
+            title: props.title,
+            season: props.season,
+          }}
+          look="page"
+        />
+      </div>
+
+      <div class={heroBody}>
+        <OverviewAndDetails
+          tagline={null}
+          overview={props.season.overview}
+          details={
+            <TitleDetails
+              genres={props.title.genres}
+              studios={props.title.studios}
+              credits={props.title.credits}
+              crew={["creator"]}
+              dates={aired()}
+            />
+          }
+        />
+      </div>
+    </DetailHero>
   )
 }
 
@@ -351,87 +358,20 @@ function SeasonHeader(props: {
 export const headingLink =
   "focus-visible:ring-ring decoration-foreground/40 rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-2"
 
-// On phones, a small poster beside the name and facts, and the rest under
-// both, full width. From `sm` up: the poster beside it all.
-const headerRow =
-  "grid grid-cols-[6rem_minmax(0,1fr)] items-end gap-x-4 gap-y-5 sm:flex sm:items-stretch sm:gap-6"
+/** The show's name over a season's or an episode's. */
+export const heroParent =
+  "text-foreground text-lg leading-7 font-semibold tracking-tight text-balance sm:text-2xl sm:leading-8"
 
-/**
- * The show's backdrop across the top of the page, fading into it. Without
- * one, the poster, blurred, keeps the page from going flat.
- */
-function HeaderBackdrop(props: {
-  toneKey: string
-  backdrop: ImageSource | null
-  poster: ImageSource | null
-  class?: string
-}) {
+/** The season's poster, blurred, where the show has no backdrop. */
+function BlurredPoster(props: { poster: ImageSource | null }) {
   return (
-    <div
-      aria-hidden="true"
-      class={[
-        "absolute inset-x-0 top-0 -z-10 h-[min(46vh,420px)] overflow-hidden sm:h-[min(54vh,520px)]",
-        tone(props.toneKey),
-        props.class,
-      ]}
-    >
-      <Show
-        when={props.backdrop}
-        fallback={
-          <Show when={props.poster}>
-            {(poster) => (
-              <div class="absolute inset-0 opacity-50">
-                <Picture
-                  sources={[poster()]}
-                  eager
-                  class="scale-110 blur-2xl"
-                />
-              </div>
-            )}
-          </Show>
-        }
-      >
-        {(backdrop) => (
-          <Picture sources={[backdrop()]} eager class="object-top" />
-        )}
-      </Show>
-      <div class="from-background/95 via-background/50 max-sm:from-background/70 max-sm:via-background/25 absolute inset-0 bg-linear-to-r to-transparent" />
-      <div class="from-background via-background/70 absolute inset-0 bg-linear-to-t via-40% to-transparent" />
-    </div>
-  )
-}
-
-/**
- * The poster beside a header's details, always 2:3. It sets the header's
- * height; the details fit beside it. Shows the name when there's no
- * poster or it fails to load.
- */
-function HeaderPoster(props: {
-  name: string
-  toneKey: string
-  poster: ImageSource | null
-}) {
-  return (
-    <div
-      class={[
-        "relative grid aspect-[2/3] w-24 shrink-0 place-items-center overflow-hidden rounded-lg border p-2 text-center shadow-2xl shadow-black/60 sm:w-36 sm:self-start sm:p-3 lg:w-[180px]",
-        tone(props.toneKey),
-      ]}
-    >
-      <Picture
-        sizes="(min-width: 1024px) 180px, (min-width: 640px) 144px, 96px"
-        sources={present(props.poster)}
-        eager
-        fallback={
-          <span
-            aria-hidden="true"
-            class="text-foreground/70 line-clamp-5 text-xs font-medium text-balance sm:text-sm"
-          >
-            {props.name}
-          </span>
-        }
-      />
-    </div>
+    <Show when={props.poster}>
+      {(poster) => (
+        <div class="absolute inset-0 opacity-50">
+          <Picture sources={[poster()]} eager class="scale-110 blur-2xl" />
+        </div>
+      )}
+    </Show>
   )
 }
 
