@@ -130,7 +130,7 @@ export function BucketBars<Bucket extends { start: string }>(props: {
       >
         <span
           aria-hidden="true"
-          class="text-muted-foreground text-11px -translate-y-1/2 self-start leading-none tabular-nums"
+          class="text-muted-foreground text-11px -translate-y-1/2 self-start leading-none"
         >
           {props.top}
         </span>
@@ -143,7 +143,7 @@ export function BucketBars<Bucket extends { start: string }>(props: {
         </div>
         <div
           aria-hidden="true"
-          class="text-muted-foreground text-11px col-start-2 flex h-4 leading-4 tabular-nums"
+          class="text-muted-foreground text-11px col-start-2 flex h-4 leading-4"
         >
           <For each={props.buckets} keyed={(bucket) => bucket.start}>
             {(bucket, index) => (

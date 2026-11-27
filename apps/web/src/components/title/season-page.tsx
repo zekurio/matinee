@@ -311,7 +311,7 @@ function SeasonHeader(props: {
         {seasonName(props.season.number)}
       </h1>
 
-      <div class="text-foreground/80 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm tabular-nums">
+      <div class="text-foreground/80 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
         <span>{facts()}</span>
         <Show when={props.title.contentRating}>
           <span class="border-foreground/25 rounded border px-1.5 text-xs leading-5">
@@ -581,7 +581,7 @@ function SeasonCard(props: {
             <span
               role="img"
               aria-label={tr("title.seasons.left", { count: left() })}
-              class="bg-primary text-primary-foreground text-11px absolute top-1.5 right-1.5 grid h-5 min-w-5 place-items-center rounded-full px-1.5 leading-none font-semibold tabular-nums shadow-sm"
+              class="bg-primary text-primary-foreground text-11px absolute top-1.5 right-1.5 grid h-5 min-w-5 place-items-center rounded-full px-1.5 leading-none font-semibold shadow-sm"
             >
               {left()}
             </span>

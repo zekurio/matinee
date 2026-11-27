@@ -119,10 +119,10 @@ export function FilterButtonFace(props: {
           aria-hidden="true"
           class={
             props.compact
-              ? "bg-primary text-primary-foreground text-11px absolute top-1.5 right-1 grid h-4 min-w-4 place-items-center rounded-full px-1 leading-4 font-semibold tabular-nums"
+              ? "bg-primary text-primary-foreground text-11px absolute top-1.5 right-1 grid h-4 min-w-4 place-items-center rounded-full px-1 leading-4 font-semibold"
               : props.badge
-                ? "bg-foreground text-background rounded-full px-1.5 text-xs leading-5 tabular-nums"
-                : "text-background/70 tabular-nums"
+                ? "bg-foreground text-background rounded-full px-1.5 text-xs leading-5"
+                : "text-background/70"
           }
         >
           {props.active}

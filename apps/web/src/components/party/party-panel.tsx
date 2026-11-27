@@ -523,7 +523,7 @@ function Queue(props: { party: Party; onClose: () => void }) {
             <For each={props.party.queue} keyed={(entry) => entry.id}>
               {(entry, index) => (
                 <li class={rowLook}>
-                  <span class="text-muted-foreground w-7 shrink-0 text-center text-xs tabular-nums">
+                  <span class="text-muted-foreground w-7 shrink-0 text-center text-xs">
                     {index() + 1}
                   </span>
                   <EntryName entry={entry()} />

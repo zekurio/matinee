@@ -383,7 +383,7 @@ export function KitControls() {
             <For each={SCROLL_ROWS}>
               {(title, index) => (
                 <div class="flex items-center gap-3 rounded-lg px-2 py-1.5">
-                  <span class="text-muted-foreground w-5 text-right text-xs tabular-nums">
+                  <span class="text-muted-foreground w-5 text-right text-xs">
                     {index() + 1}
                   </span>
                   <span>{title}</span>

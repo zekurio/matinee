@@ -242,7 +242,7 @@ export function PosterBadge(props: {
           <Show
             when={state === "coming" && props.availability.progress !== null}
           >
-            <span class="font-normal tabular-nums opacity-75">
+            <span class="font-normal opacity-75">
               {formatPercent(props.availability.progress ?? 0)}
             </span>
           </Show>

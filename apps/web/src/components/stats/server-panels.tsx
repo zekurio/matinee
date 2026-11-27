@@ -59,7 +59,7 @@ export function Methods(props: { methods: MethodStat[] }) {
               <span class="min-w-0 flex-1 truncate">
                 {methodName(entry().method)}
               </span>
-              <span class="text-muted-foreground shrink-0 tabular-nums">
+              <span class="text-muted-foreground shrink-0">
                 {`${formatWatchTime(entry().watchSeconds)} · `}
                 <span class="text-foreground font-medium">
                   {percent(entry().watchSeconds, total())}

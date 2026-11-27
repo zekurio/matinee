@@ -84,7 +84,7 @@ export function WatchOverview(props: {
       >
         <div>
           <p class="text-muted-foreground text-sm leading-6">{heading()}</p>
-          <p class="text-4xl leading-tight font-bold tracking-tight tabular-nums">
+          <p class="text-4xl leading-tight font-bold tracking-tight">
             {formatWatchTime(
               shown()?.watchSeconds ?? props.stats.totals.watchSeconds,
             )}
@@ -123,7 +123,7 @@ export function TopTitlesSection(props: { stats: WatchStats }) {
                   {/* The first three stand out, as on the apps. */}
                   <span
                     class={[
-                      "w-5 shrink-0 text-sm font-semibold tabular-nums",
+                      "w-5 shrink-0 text-sm font-semibold",
                       index() < 3 ? "text-foreground" : "text-muted-foreground",
                     ]}
                   >
@@ -143,11 +143,11 @@ export function TopTitlesSection(props: { stats: WatchStats }) {
                     <span class="text-15px truncate leading-6">
                       {entry().title.name}
                     </span>
-                    <span class="text-muted-foreground text-sm tabular-nums">
+                    <span class="text-muted-foreground text-sm">
                       {tr("stats.plays", { count: entry().plays })}
                     </span>
                   </span>
-                  <span class="text-15px shrink-0 font-semibold tabular-nums">
+                  <span class="text-15px shrink-0 font-semibold">
                     {formatWatchTime(entry().watchSeconds)}
                   </span>
                 </Link>

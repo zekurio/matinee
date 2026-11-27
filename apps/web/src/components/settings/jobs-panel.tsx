@@ -297,7 +297,7 @@ function Fact(props: {
       <dt class="text-foreground-faint text-xs leading-4">{props.label}</dt>
       <dd
         class={cn(
-          "mt-1 flex h-5 min-w-0 items-center gap-1.5 text-13px leading-5 tabular-nums",
+          "mt-1 flex h-5 min-w-0 items-center gap-1.5 text-13px leading-5",
           props.tone === "muted" && "text-muted-foreground",
         )}
       >
@@ -307,7 +307,7 @@ function Fact(props: {
         <dd
           title={props.title}
           class={cn(
-            "truncate text-xs leading-4 tabular-nums",
+            "truncate text-xs leading-4",
             props.tone === "destructive"
               ? "text-destructive"
               : "text-muted-foreground",

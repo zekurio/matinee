@@ -82,7 +82,7 @@ export function WatchingNow() {
     <section aria-label={tr("stats.live.title")}>
       <SectionHeading title={tr("stats.live.title")}>
         <Show when={count() > 0}>
-          <span class="text-muted-foreground text-sm tabular-nums">
+          <span class="text-muted-foreground text-sm">
             {tr("stats.live.streams", { count: count() })}
           </span>
         </Show>
@@ -367,7 +367,7 @@ function NowPlayingRow(props: {
               )}
             </Show>
           </p>
-          <span class="text-muted-foreground shrink-0 text-xs tabular-nums">
+          <span class="text-muted-foreground shrink-0 text-xs">
             <Show
               when={!props.session.paused}
               fallback={

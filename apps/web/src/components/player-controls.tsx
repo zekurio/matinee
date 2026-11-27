@@ -50,7 +50,7 @@ const FLASH_MS = 700
 
 /** Text over the picture: 12px Red Hat reads thin there, so 14px, full white, and a shadow. */
 const overlayTextClass =
-  "text-sm font-medium text-white tabular-nums [text-shadow:0_1px_2px_rgb(0_0_0/0.6)]"
+  "text-sm font-medium text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.6)]"
 
 export const controlButtonClass =
   "grid size-10 shrink-0 place-items-center rounded-full text-white/85 outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white [@media(pointer:coarse)]:size-11 [&_svg]:size-5"
@@ -420,13 +420,13 @@ function SeekPreview(props: {
     <Show
       when={props.trickplay}
       fallback={
-        <span class="block rounded-md bg-black/45 px-2 py-1 text-xs font-medium text-white tabular-nums shadow-lg ring-1 ring-white/15 backdrop-blur-md">
+        <span class="block rounded-md bg-black/45 px-2 py-1 text-xs font-medium text-white shadow-lg ring-1 ring-white/15 backdrop-blur-md">
           {formatTime(props.time())}
         </span>
       }
     >
       {(tiles) => (
-        <span class="flex flex-col items-center gap-1 rounded-lg bg-black/45 p-1 pb-1.5 text-xs font-medium text-white tabular-nums shadow-lg ring-1 ring-white/15 backdrop-blur-md">
+        <span class="flex flex-col items-center gap-1 rounded-lg bg-black/45 p-1 pb-1.5 text-xs font-medium text-white shadow-lg ring-1 ring-white/15 backdrop-blur-md">
           <TrickplayThumb
             tiles={tiles()}
             time={props.time()}
@@ -657,7 +657,7 @@ export function Transport(props: {
           <Icon icon={props2.icon} />
           <span
             aria-hidden="true"
-            class="text-10px absolute pt-1 leading-none font-semibold tabular-nums"
+            class="text-10px absolute pt-1 leading-none font-semibold"
           >
             {props2.seconds}
           </span>
@@ -804,7 +804,7 @@ export function FlashNote() {
       {(note) => (
         <div
           aria-hidden="true"
-          class="animate-in fade-in-0 zoom-in-95 pointer-events-none absolute top-1/4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm font-medium tabular-nums backdrop-blur-md duration-150 [&_svg]:size-4"
+          class="animate-in fade-in-0 zoom-in-95 pointer-events-none absolute top-1/4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm font-medium backdrop-blur-md duration-150 [&_svg]:size-4"
         >
           <Show when={note.icon}>{(icon) => <Icon icon={icon()} />}</Show>
           {note.text}

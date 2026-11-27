@@ -57,7 +57,7 @@ export function SeasonsRail(props: {
                     <span
                       role="img"
                       aria-label={tr("title.seasons.left", { count: left() })}
-                      class="bg-primary text-primary-foreground text-11px absolute top-1.5 right-1.5 grid h-5 min-w-5 place-items-center rounded-full px-1.5 font-semibold tabular-nums"
+                      class="bg-primary text-primary-foreground text-11px absolute top-1.5 right-1.5 grid h-5 min-w-5 place-items-center rounded-full px-1.5 font-semibold"
                     >
                       {left()}
                     </span>

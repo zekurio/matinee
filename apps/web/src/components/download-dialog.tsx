@@ -190,7 +190,7 @@ function DownloadFiles(props: {
         </Match>
         <Match when={files().length > 0}>
           <div class="flex flex-col gap-1">
-            <p class="text-sm font-medium tabular-nums">
+            <p class="text-sm font-medium">
               {[
                 tr("downloads.all.files", { count: files().length }),
                 formatBytes(size()),

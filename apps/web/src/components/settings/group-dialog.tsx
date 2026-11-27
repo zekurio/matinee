@@ -484,7 +484,7 @@ function ProviderGroupField(props: {
                 {(item) => (
                   <AutocompleteItem value={item().name}>
                     <span class="min-w-0 flex-1 truncate">{item().name}</span>
-                    <span class="text-muted-foreground shrink-0 text-xs tabular-nums">
+                    <span class="text-muted-foreground shrink-0 text-xs">
                       {tr("access.group.providerAccounts", {
                         count: item().accounts,
                       })}

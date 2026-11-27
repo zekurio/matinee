@@ -552,7 +552,7 @@ function ConnectionRules(props: {
           <For each={list()} keyed={(rule) => rule.id}>
             {(rule, index) => (
               <li class="flex items-start gap-2 py-2 pr-1.5 pl-3">
-                <span class="text-muted-foreground text-13px w-4 shrink-0 pt-px tabular-nums">
+                <span class="text-muted-foreground text-13px w-4 shrink-0 pt-px">
                   {index() + 1}
                 </span>
                 <RuleSummary

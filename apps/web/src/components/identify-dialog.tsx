@@ -216,7 +216,7 @@ function IdentifyForm(props: {
                             {match().name}
                           </span>
                           <Show when={match().year}>
-                            <span class="text-muted-foreground text-sm tabular-nums">
+                            <span class="text-muted-foreground text-sm">
                               {match().year}
                             </span>
                           </Show>

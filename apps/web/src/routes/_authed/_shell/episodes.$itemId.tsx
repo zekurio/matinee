@@ -524,7 +524,7 @@ function EpisodeHeading(props: { item: MediaItem }) {
         props.item.seasonNumber !== null && props.item.episodeNumber !== null
       }
     >
-      <p class="text-foreground/80 mt-1 text-base font-medium tabular-nums sm:text-lg">
+      <p class="text-foreground/80 mt-1 text-base font-medium sm:text-lg">
         <Show when={props.item.title} fallback={name()}>
           {(title) => (
             <Link

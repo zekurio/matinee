@@ -286,7 +286,7 @@ function SliderRow(props: {
             }
             class="flex-1"
           />
-          <span class="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums">
+          <span class="text-muted-foreground w-12 shrink-0 text-right text-xs">
             {props.label(props.value)}
           </span>
         </div>

@@ -44,7 +44,6 @@ export function KindPicker(props: {
                 {tr(`browse.kind.${option ?? "all"}`)}
                 <span
                   class={[
-                    "tabular-nums",
                     active() ? "text-background/70" : "text-muted-foreground",
                   ]}
                 >

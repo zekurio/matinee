@@ -440,9 +440,7 @@ function Rows(props: { rows: Row[] }) {
               <dt class="text-foreground/65 whitespace-nowrap">
                 {row().label}
               </dt>
-              <dd class="min-w-0 font-medium break-words tabular-nums">
-                {row().value}
-              </dd>
+              <dd class="min-w-0 font-medium break-words">{row().value}</dd>
             </div>
           )}
         </For>

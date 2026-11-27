@@ -20,9 +20,7 @@ export function Score(props: {
   return (
     <Show when={text()}>
       {(score) => (
-        <span
-          class={["inline-flex items-center gap-1 tabular-nums", props.class]}
-        >
+        <span class={["inline-flex items-center gap-1", props.class]}>
           <Icon
             icon={Star}
             class={[

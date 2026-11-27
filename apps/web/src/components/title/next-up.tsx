@@ -88,7 +88,7 @@ export function NextUp(props: { item: MediaItem }) {
         <div class="min-w-0 py-0.5">
           <p class="flex items-baseline gap-2">
             <Show when={code()}>
-              <span class="text-muted-foreground shrink-0 text-sm tabular-nums">
+              <span class="text-muted-foreground shrink-0 text-sm">
                 {code()}
               </span>
             </Show>
@@ -101,9 +101,7 @@ export function NextUp(props: { item: MediaItem }) {
             </ItemLink>
           </p>
           <Show when={facts()}>
-            <p class="text-muted-foreground text-13px mt-1 tabular-nums">
-              {facts()}
-            </p>
+            <p class="text-muted-foreground text-13px mt-1">{facts()}</p>
           </Show>
           <MediaInfoLine item={props.item} />
           <Show when={props.item.episode?.overview}>

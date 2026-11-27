@@ -207,7 +207,7 @@ export function Place(props: {
     >
       <span
         class={[
-          "text-11px grid size-5 shrink-0 place-items-center rounded-full font-semibold tabular-nums",
+          "text-11px grid size-5 shrink-0 place-items-center rounded-full font-semibold",
           PODIUM.get(props.entry.rank) ?? "text-muted-foreground",
         ]}
       >
@@ -230,7 +230,7 @@ export function Place(props: {
           </span>
         </Show>
       </Link>
-      <span class="text-13px shrink-0 font-medium tabular-nums">
+      <span class="text-13px shrink-0 font-medium">
         {props.format(props.entry.value)}
       </span>
     </li>

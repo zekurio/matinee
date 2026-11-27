@@ -217,7 +217,7 @@ export function Section(props: {
           </Show>
         </div>
         <Show when={props.value}>
-          <span class="text-muted-foreground text-13px text-right tabular-nums">
+          <span class="text-muted-foreground text-13px text-right">
             {props.value}
           </span>
         </Show>
@@ -233,10 +233,7 @@ function Count(props: { value?: number; active?: boolean }) {
   return (
     <Show when={props.value !== undefined}>
       <span
-        class={[
-          "tabular-nums",
-          props.active ? "text-background/70" : "text-muted-foreground",
-        ]}
+        class={[props.active ? "text-background/70" : "text-muted-foreground"]}
       >
         {formatCount(props.value ?? 0)}
       </span>

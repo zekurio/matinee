@@ -242,7 +242,7 @@ function FigureRows(props: { figures: StatFigure[]; class: string }) {
                 </span>
               </Show>
             </span>
-            <span class="text-15px shrink-0 leading-6 font-semibold tabular-nums">
+            <span class="text-15px shrink-0 leading-6 font-semibold">
               {figure().value}
             </span>
           </li>
@@ -296,12 +296,12 @@ export function RankedBars(props: { rows: RankedRow[]; class?: string }) {
             <span class="flex min-w-0 flex-col">
               <span class="text-15px truncate leading-6">{row().label}</span>
               <Show when={row().note}>
-                <span class="text-muted-foreground truncate text-sm tabular-nums">
+                <span class="text-muted-foreground truncate text-sm">
                   {row().note}
                 </span>
               </Show>
             </span>
-            <span class="text-15px shrink-0 leading-6 font-semibold tabular-nums">
+            <span class="text-15px shrink-0 leading-6 font-semibold">
               {row().detail}
             </span>
           </li>
