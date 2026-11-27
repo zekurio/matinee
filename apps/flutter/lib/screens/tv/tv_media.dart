@@ -198,7 +198,7 @@ class TvFacts extends StatelessWidget {
         if (facts.isNotEmpty)
           Flexible(
             child: Text(
-              facts.join('  ·  '),
+              facts.join(' · '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: style.style(color: color),

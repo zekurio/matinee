@@ -421,13 +421,14 @@ class _SkipButton extends StatelessWidget {
     builder: (context, focused) => TvControl(
       focused: focused,
       builder: (context, look) => SizedBox.square(
-        dimension: _play,
+        dimension: _small,
         child: Stack(
           alignment: Alignment.center,
           children: [
-            KitIcon(icon, size: 38, color: look.content),
+            KitIcon(icon, size: 28, color: look.content),
+            // A unit below the middle, inside the arrow, as on the web.
             Padding(
-              padding: const EdgeInsets.only(top: 3),
+              padding: const EdgeInsets.only(top: 2),
               child: Text(
                 '$seconds',
                 textAlign: TextAlign.center,
