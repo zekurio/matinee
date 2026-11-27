@@ -1,4 +1,5 @@
 import type { MediaItem, Title } from "@matinee/contracts"
+import type { JSX } from "@solidjs/web"
 import { Link } from "@tanstack/solid-router"
 import { Play } from "lucide"
 import { createMemo, For, Show } from "solid-js"
@@ -12,12 +13,19 @@ import { tr } from "@/i18n"
 import { buttonVariants } from "@/kit/button"
 import { Icon } from "@/kit/icon"
 import { formatRuntime } from "@/lib/format"
-import { art, frame, mediaFlags, present, timeLeft } from "@/lib/media"
+import {
+  art,
+  frame,
+  type ImageSource,
+  mediaFlags,
+  present,
+  timeLeft,
+} from "@/lib/media"
 
 import { HeaderOverview } from "./header-overview"
 import { MediaInfo } from "./media-info"
 import { Score } from "./score"
-import { TitleDetails } from "./title-details"
+import { releasedOn, TitleDetails } from "./title-details"
 import { MatchNote } from "./title-menu"
 
 export const headingTop =
@@ -31,6 +39,9 @@ export const headingPoster =
  */
 export const titlePoster =
   "hidden w-44 shrink-0 self-start sm:block lg:w-60 xl:w-72"
+/** An episode's still in the poster's place, wider and as high up. */
+export const titleStill =
+  "hidden w-56 shrink-0 self-start sm:block md:w-72 lg:w-96 xl:w-[28rem]"
 export const titleColumnTop = "sm:pt-24 lg:pt-28"
 /**
  * A library title's backdrop: 16:9 on phones, so the details start
@@ -53,84 +64,145 @@ export function TitleHeader(props: {
   )
   const movie = () => props.title.kind === "movie" && props.title.next
   return (
-    <section aria-labelledby="title-name" class="isolate">
+    <DetailHero
+      labelledBy="title-name"
+      toneKey={props.title.id}
+      backdrop={sources()}
+      artClass={titlePoster}
+      art={
+        <PosterArt
+          name={props.title.name}
+          toneKey={props.title.id}
+          poster={art(props.title.images.poster)}
+        />
+      }
+    >
+      <h1
+        id="title-name"
+        class="max-sm:text-30px text-2xl leading-[1.1] font-semibold tracking-tight text-balance max-sm:line-clamp-3 max-sm:leading-9 max-sm:font-bold sm:text-4xl lg:text-5xl"
+      >
+        {props.title.name}
+      </h1>
+      <Show
+        when={
+          props.title.originalName &&
+          props.title.originalName !== props.title.name
+        }
+      >
+        <p class="text-muted-foreground mt-1 text-sm max-sm:text-base">
+          {props.title.originalName}
+        </p>
+      </Show>
+      <TitleFacts title={props.title} />
+      <div class={heroActions}>
+        <Show when={props.title.next}>
+          {(item) => <PlayButton item={item()} />}
+        </Show>
+        <Show when={props.title.itemCount > 0}>
+          <WatchedButton watched={props.watched} />
+        </Show>
+        <FavoriteButton title={props.title} />
+        <ActionsMenu
+          target={{
+            kind: "title",
+            title: props.title,
+            file: props.title.next,
+          }}
+          look="page"
+        />
+      </div>
+      <div class={heroBody}>
+        <Show when={movie()}>{(item) => <MediaInfo item={item()} />}</Show>
+        <OverviewAndDetails
+          tagline={props.title.tagline}
+          overview={props.title.overview}
+          details={
+            <TitleDetails
+              genres={props.title.genres}
+              studios={props.title.studios}
+              credits={props.title.credits}
+              dates={releasedOn(props.title.releaseDate)}
+            />
+          }
+        />
+        <MatchNote title={props.title} />
+      </div>
+    </DetailHero>
+  )
+}
+
+/** The buttons under a hero's facts. */
+export const heroActions = "mt-5 flex items-center gap-2.5"
+/** What follows them: the file, the overview, and the details. */
+export const heroBody = "mt-6 flex max-w-6xl flex-col gap-5"
+
+/**
+ * The top of a library page as Jellyfin lays it out, shared by a title,
+ * a season, and an episode: the backdrop across the window, and from `sm`
+ * up the art beside the name, facts, and actions, with the rest under
+ * them. Phones leave the art out, as the backdrop shows above.
+ */
+export function DetailHero(props: {
+  /** The id of the page's heading. */
+  labelledBy: string
+  toneKey: string
+  backdrop: ImageSource[]
+  /** What shows when there's no backdrop, or none loads. */
+  backdropFallback?: JSX.Element
+  /** The poster or the still, in a column `artClass` sizes. */
+  art: JSX.Element
+  artClass: string
+  children: JSX.Element
+}) {
+  return (
+    <section aria-labelledby={props.labelledBy} class="isolate">
       <div
         aria-hidden="true"
-        data-title-backdrop={sources().length ? "" : undefined}
+        data-title-backdrop={props.backdrop.length ? "" : undefined}
         class={[
           "absolute inset-x-0 top-0 -z-10 overflow-hidden",
           titleBackdrop,
-          tone(props.title.id),
+          tone(props.toneKey),
         ]}
       >
-        <Picture sources={sources()} eager class="object-top" />
+        <Picture
+          sources={props.backdrop}
+          eager
+          class="object-top"
+          fallback={props.backdropFallback}
+        />
         <div class="from-background/95 via-background/50 max-sm:from-background/70 max-sm:via-background/25 absolute inset-0 bg-linear-to-r to-transparent" />
         <div class="from-background via-background/70 absolute inset-0 bg-linear-to-t via-40% to-transparent" />
       </div>
 
       <div class={["flex gap-6 lg:gap-10", titleTop]}>
-        <div class={titlePoster}>
-          <PosterArt
-            name={props.title.name}
-            toneKey={props.title.id}
-            poster={art(props.title.images.poster)}
-          />
-        </div>
-        <div class={["min-w-0 flex-1", titleColumnTop]}>
-          <h1
-            id="title-name"
-            class="max-sm:text-30px text-2xl leading-[1.1] font-semibold tracking-tight text-balance max-sm:line-clamp-3 max-sm:leading-9 max-sm:font-bold sm:text-4xl lg:text-5xl"
-          >
-            {props.title.name}
-          </h1>
-          <Show
-            when={
-              props.title.originalName &&
-              props.title.originalName !== props.title.name
-            }
-          >
-            <p class="text-muted-foreground mt-1 text-sm max-sm:text-base">
-              {props.title.originalName}
-            </p>
-          </Show>
-          <TitleFacts title={props.title} />
-          <div class="mt-5 flex items-center gap-2.5">
-            <Show when={props.title.next}>
-              {(item) => <PlayButton item={item()} />}
-            </Show>
-            <Show when={props.title.itemCount > 0}>
-              <WatchedButton watched={props.watched} />
-            </Show>
-            <FavoriteButton title={props.title} />
-            <ActionsMenu
-              target={{
-                kind: "title",
-                title: props.title,
-                file: props.title.next,
-              }}
-              look="page"
-            />
-          </div>
-          <div class="mt-6 flex max-w-6xl flex-col gap-5">
-            <Show when={movie()}>{(item) => <MediaInfo item={item()} />}</Show>
-            {/* Side by side once there's room, the details beside the overview. */}
-            <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:gap-10">
-              <div class="min-w-0 xl:flex-1">
-                <HeaderOverview
-                  tagline={props.title.tagline}
-                  overview={props.title.overview}
-                  lines={6}
-                />
-              </div>
-              <div class="xl:w-80 xl:shrink-0 2xl:w-96">
-                <TitleDetails title={props.title} />
-              </div>
-            </div>
-            <MatchNote title={props.title} />
-          </div>
-        </div>
+        <div class={props.artClass}>{props.art}</div>
+        <div class={["min-w-0 flex-1", titleColumnTop]}>{props.children}</div>
       </div>
     </section>
+  )
+}
+
+/**
+ * The overview, and the table of details beside it once there's room,
+ * under it until then.
+ */
+export function OverviewAndDetails(props: {
+  tagline: string | null
+  overview: string | null
+  details: JSX.Element
+}) {
+  return (
+    <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:gap-10">
+      <div class="min-w-0 xl:flex-1">
+        <HeaderOverview
+          tagline={props.tagline}
+          overview={props.overview}
+          lines={6}
+        />
+      </div>
+      <div class="xl:w-80 xl:shrink-0 2xl:w-96">{props.details}</div>
+    </div>
   )
 }
 

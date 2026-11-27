@@ -22,6 +22,7 @@ export default {
   "title.rating": "Bewertung {rating}",
   "title.details.genres": plural({ one: "Genre", other: "Genres" }),
   "title.details.released": "Erschienen",
+  "title.details.aired": "Ausgestrahlt",
   "title.trailer": "Trailer",
   "title.trailerHint": "Trailer auf YouTube ansehen",
   "title.menu.fixMatch": "Zuordnung korrigieren",

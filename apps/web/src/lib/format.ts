@@ -116,6 +116,11 @@ export function formatDate(date: Date): string {
   return dates().format(date)
 }
 
+/** "Jan 3 – Mar 1, 2020", with what the two days share said once. */
+export function formatDateRange(start: Date, end: Date): string {
+  return dates().formatRange(start, end)
+}
+
 const dateTimes = perLocale(
   (locale) =>
     new Intl.DateTimeFormat(locale, {

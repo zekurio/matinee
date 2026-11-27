@@ -10,13 +10,23 @@ import { ItemFavoriteButton } from "@/components/favorite-button"
 import { SeasonEpisodeCard, Thumb } from "@/components/media-item"
 import { useDocumentTitle } from "@/components/page-header"
 import { ItemTopBar, parentLink } from "@/components/phone-nav"
-import { Picture, tone } from "@/components/picture"
 import { Rail, RailItem } from "@/components/rail"
 import { MediaInfo } from "@/components/title/media-info"
 import { railStart } from "@/components/title/rail-start"
 import { Score } from "@/components/title/score"
-import { headingLink } from "@/components/title/season-page"
+import { headingLink, heroParent } from "@/components/title/season-page"
 import { seasonParams } from "@/components/title/seasons"
+import { TitleDetails } from "@/components/title/title-details"
+import {
+  DetailHero,
+  heroActions,
+  heroBody,
+  OverviewAndDetails,
+  titleBackdrop,
+  titleColumnTop,
+  titleStill,
+  titleTop,
+} from "@/components/title/title-header"
 import {
   seasonItemsOptions,
   titleOptions,
@@ -26,7 +36,7 @@ import { tr } from "@/i18n"
 import { buttonVariants } from "@/kit/button"
 import { Icon } from "@/kit/icon"
 import { Skeleton } from "@/kit/skeleton"
-import { formatDate, formatRuntime } from "@/lib/format"
+import { formatDate, formatRuntime, parseDay } from "@/lib/format"
 import {
   art,
   frame,
@@ -39,7 +49,6 @@ import {
 } from "@/lib/media"
 import { reloadOnEnter } from "@/lib/route-loading"
 import { errorMessage, orpc } from "@/lib/rpc"
-import { useOverviewToggle } from "@/lib/use-overview-toggle"
 import { isPhone } from "@/lib/viewport"
 
 export const Route = createFileRoute("/_authed/_shell/episodes/$itemId")({
@@ -149,13 +158,24 @@ function EpisodeDetail(props: { itemId: string }) {
 function EpisodeSkeleton() {
   return (
     <div role="status" aria-label={tr("ui.loading")}>
-      <Skeleton class="absolute inset-x-0 top-0 h-[min(46vh,420px)] rounded-none [mask-image:linear-gradient(black,transparent)] sm:h-[min(56vh,520px)]" />
-      <div class="relative flex gap-8 pt-[max(10rem,30vh)] sm:pt-[max(12rem,32vh)]">
-        <Skeleton class="aspect-video w-full max-w-md shrink-0 rounded-lg sm:w-80 sm:max-w-none lg:w-[28rem] xl:w-[32rem] 2xl:w-[36rem]" />
-        <div class="flex-1 max-sm:hidden">
-          <Skeleton class="h-4 w-32" />
-          <Skeleton class="mt-3 h-10 w-2/3" />
-          <Skeleton class="mt-6 h-16 w-full max-w-xl" />
+      <Skeleton
+        class={[
+          "absolute inset-x-0 top-0 rounded-none [mask-image:linear-gradient(black,transparent)]",
+          titleBackdrop,
+        ].join(" ")}
+      />
+      <div class={["relative flex gap-6 lg:gap-10", titleTop]}>
+        <Skeleton class={[titleStill, "aspect-video rounded-lg"].join(" ")} />
+        <div class={["w-full max-w-xl", titleColumnTop].join(" ")}>
+          <Skeleton class="h-6 w-40" />
+          <Skeleton class="mt-3 h-9 w-2/3 sm:h-10" />
+          <Skeleton class="mt-3 h-5 w-1/3" />
+          <div class="mt-5 flex items-center gap-2">
+            <Skeleton class="h-11 flex-1 sm:h-10 sm:w-40 sm:flex-none" />
+            <Skeleton class="size-11 rounded-full sm:size-10" />
+            <Skeleton class="size-11 rounded-full sm:size-10" />
+          </div>
+          <Skeleton class="mt-6 h-[4.5rem] w-full" />
         </div>
       </div>
     </div>
@@ -199,13 +219,14 @@ function EpisodeParent(props: { item: MediaItem }) {
 }
 
 /**
- * The whole page: the show's backdrop across the window, the episode's
- * still, and its name, facts, description, and Play. The still only shows;
- * Play sits with the other buttons.
+ * The top of the page, laid out as its show's: the show's backdrop across
+ * the window, the episode's still in the poster's place, its name, facts,
+ * and Play, then the file, and the overview beside the show's genres,
+ * creators, and studios. The still only shows; Play sits with the other
+ * buttons.
  */
 function EpisodeHeader(props: { item: MediaItem }) {
   const label = () => itemLabel(props.item)
-  const overview = useOverviewToggle()
   const marked = useItemWatched(() => props.item)
   const resume = () => props.item.progress !== null && !marked.on()
   const facts = () => {
@@ -214,10 +235,9 @@ function EpisodeHeader(props: { item: MediaItem }) {
       episode?.runtimeMinutes ??
         (durationSeconds ? Math.round(durationSeconds / 60) : null),
     )
+    const aired = episode?.airDate ? parseDay(episode.airDate) : null
     return [
-      episode?.airDate
-        ? formatDate(new Date(`${episode.airDate}T12:00:00`))
-        : null,
+      aired ? formatDate(aired) : null,
       resume() ? timeLeft(props.item) : runtime,
     ]
       .filter(Boolean)
@@ -233,129 +253,99 @@ function EpisodeHeader(props: { item: MediaItem }) {
     const show = art(props.item.title?.images.backdrop, "large")
     return isPhone() ? present(...still, show) : present(show, ...still)
   })
+  // The show's, for its genres, creators, and studios. The page's loader
+  // asked for it already.
+  const owner = () =>
+    props.item.title?.kind === "show" ? props.item.title.id : null
+  const show = useQuery(() => {
+    const id = owner()
+    return orpc.titles.get.queryOptions({ input: id ? { id } : skipToken })
+  })
 
   return (
-    <section aria-labelledby="episode-name" class="isolate">
-      <div
-        aria-hidden="true"
-        class={[
-          "absolute inset-x-0 top-0 -z-10 h-[min(46vh,420px)] overflow-hidden sm:h-[min(64vh,600px)]",
-          tone(label().showKey),
-        ]}
+    <DetailHero
+      labelledBy="episode-name"
+      toneKey={label().showKey}
+      backdrop={backdrop()}
+      artClass={titleStill}
+      art={
+        <Thumb
+          sources={landscapeSources(props.item, "large")}
+          toneKey={label().showKey}
+          progress={progressRatio(props.item)}
+          watched={marked.on()}
+          hover={false}
+          class="w-full rounded-lg shadow-2xl shadow-black/60"
+        />
+      }
+    >
+      <ShowLink item={props.item} />
+      <EpisodeHeading item={props.item} />
+      <h1
+        id="episode-name"
+        class="mt-1 text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl"
       >
-        <Picture sources={backdrop()} eager class="object-top" />
-        <div class="from-background/95 via-background/50 max-sm:from-background/70 max-sm:via-background/25 absolute inset-0 bg-linear-to-r to-transparent" />
-        <div class="from-background via-background/70 absolute inset-0 bg-linear-to-t via-40% to-transparent" />
+        {label().title}
+      </h1>
+
+      <div class="text-foreground/80 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+        <Show when={facts()}>
+          <span>{facts()}</span>
+        </Show>
+        <Show when={props.item.title?.contentRating}>
+          <span class="border-foreground/25 rounded border px-1.5 text-xs leading-5">
+            {props.item.title?.contentRating}
+          </span>
+        </Show>
+        {/* The episode's own score, never its show's. */}
+        <Score score={props.item.episode?.rating ?? null} />
       </div>
 
-      {/* As on a title's page. Phones start higher, so the season's other
-          episodes make the first screen too. */}
-      <div class="pt-[max(10rem,30vh)] sm:pt-[max(12rem,32vh)]">
-        <div class="flex flex-col gap-6 sm:flex-row sm:items-stretch sm:gap-8">
-          {/* 16:9 at the least, then stretched to the details' height with
-              the sides cropped. Capped at 4:3 so long details don't crop it
-              to a square. An expanded overview leaves it as it was. */}
-          {/* A still that only shows: Play is below, in words. */}
-          <div
-            ref={overview.artRef}
-            style={overview.artStyle()}
-            class={[
-              "w-full max-w-md shrink-0 overflow-hidden rounded-lg shadow-2xl shadow-black/60 max-sm:hidden sm:max-h-60 sm:w-80 sm:max-w-none lg:max-h-84 lg:w-[28rem] xl:max-h-96 xl:w-[32rem] 2xl:max-h-108 2xl:w-[36rem]",
-              overview.artClass(),
-            ]}
-          >
-            <Thumb
-              sources={landscapeSources(props.item, "large")}
-              toneKey={label().showKey}
-              progress={progressRatio(props.item)}
-              watched={marked.on()}
-              hover={false}
-              class="w-full rounded-lg sm:h-full"
-            />
-          </div>
+      <div class={heroActions}>
+        <Link
+          to="/watch/$itemId"
+          params={{ itemId: props.item.id }}
+          class={buttonVariants({
+            size: "lg",
+            className: "min-w-0 max-sm:flex-1 sm:min-w-40",
+          })}
+        >
+          <Icon icon={Play} fill="currentColor" />
+          {resume() ? tr("title.resume") : tr("title.play")}
+        </Link>
+        <WatchedButton watched={marked} />
+        <ItemFavoriteButton item={props.item} />
+        <ActionsMenu
+          target={{
+            kind: "item",
+            item: props.item,
+            name: label().title,
+          }}
+          look="page"
+        />
+      </div>
 
-          {/* Stretched to the row, so the show's name lines up with the
-              still's top and the buttons with its bottom. */}
-          <div class="min-w-0 flex-1 sm:flex sm:flex-col">
-            <ShowLink item={props.item} />
-            <EpisodeHeading item={props.item} />
-            <h1
-              id="episode-name"
-              class="mt-1 text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl"
-            >
-              {label().title}
-            </h1>
-
-            <div class="text-foreground/80 mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
-              <Show when={facts()}>
-                <span>{facts()}</span>
-              </Show>
-              <Show when={props.item.title?.contentRating}>
-                <span class="border-foreground/25 rounded border px-1.5 text-xs leading-5">
-                  {props.item.title?.contentRating}
-                </span>
-              </Show>
-              {/* The episode's own score, never its show's. */}
-              <Score score={props.item.episode?.rating ?? null} />
-            </div>
-
-            <Show when={props.item.episode?.overview}>
-              {(text) => (
-                <div class="mt-4 max-w-2xl">
-                  <p
-                    class={[
-                      "text-foreground/85 sm:text-15px text-sm leading-6 whitespace-pre-line",
-                      { "line-clamp-3": !overview.expanded() },
-                    ]}
-                  >
-                    {text()}
-                  </p>
-                  <Show when={text().length > 240}>
-                    <button
-                      type="button"
-                      onClick={() => overview.toggle()}
-                      class="text-muted-foreground hover:text-foreground focus-visible:ring-ring mt-1 rounded text-sm font-medium outline-none focus-visible:ring-2"
-                    >
-                      {overview.expanded()
-                        ? tr("title.less")
-                        : tr("title.more")}
-                    </button>
-                  </Show>
-                </div>
+      <div class={heroBody}>
+        <MediaInfo item={props.item} />
+        <OverviewAndDetails
+          tagline={null}
+          overview={props.item.episode?.overview ?? null}
+          details={
+            <Show when={show.isSuccess && show.data}>
+              {(found) => (
+                <TitleDetails
+                  genres={found().genres}
+                  studios={found().studios}
+                  credits={found().credits}
+                  crew={["creator"]}
+                  dates={null}
+                />
               )}
             </Show>
-
-            <div class="mt-4">
-              <MediaInfo item={props.item} />
-            </div>
-
-            <div class="flex items-center gap-2 pt-6 sm:mt-auto">
-              <Link
-                to="/watch/$itemId"
-                params={{ itemId: props.item.id }}
-                class={buttonVariants({
-                  size: "lg",
-                  className: "min-w-0 max-sm:flex-1",
-                })}
-              >
-                <Icon icon={Play} fill="currentColor" />
-                {resume() ? tr("title.resume") : tr("title.play")}
-              </Link>
-              <WatchedButton watched={marked} />
-              <ItemFavoriteButton item={props.item} />
-              <ActionsMenu
-                target={{
-                  kind: "item",
-                  item: props.item,
-                  name: label().title,
-                }}
-                look="page"
-              />
-            </div>
-          </div>
-        </div>
+          }
+        />
       </div>
-    </section>
+    </DetailHero>
   )
 }
 
@@ -481,10 +471,6 @@ function ShowLink(props: { item: MediaItem }) {
     ...orpc.libraries.get.queryOptions({ input: { id: props.item.libraryId } }),
     enabled: props.item.title === null,
   }))
-  // The negative margin sets the letters, not the line box, level with the
-  // still's top.
-  const lineClass =
-    "text-foreground -mt-1 text-xl leading-7 font-semibold tracking-tight text-balance sm:text-2xl sm:leading-8"
   return (
     <Show
       when={props.item.title}
@@ -492,10 +478,10 @@ function ShowLink(props: { item: MediaItem }) {
         // Holds the line while the library loads, so nothing moves.
         <Show
           when={library.isSuccess && library.data}
-          fallback={<div class="-mt-1 h-7 sm:h-8" />}
+          fallback={<div class="h-7 sm:h-8" />}
         >
           {(found) => (
-            <p class={lineClass}>
+            <p class={heroParent}>
               <Link
                 to="/libraries/$libraryId"
                 params={{ libraryId: props.item.libraryId }}
@@ -509,7 +495,7 @@ function ShowLink(props: { item: MediaItem }) {
       }
     >
       {(title) => (
-        <p class={lineClass}>
+        <p class={heroParent}>
           <Link
             to="/titles/$titleId"
             params={{ titleId: title().id }}
