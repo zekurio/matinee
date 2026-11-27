@@ -135,24 +135,22 @@ function ToastStack(props: {
       {(entry) => (
         <Toast
           data-styled="true"
-          class="matinee-toast group/toast absolute inset-x-0 z-[calc(10-var(--toast-index))] h-(--toast-height) [translate:var(--toast-swipe-x,0px)_calc(var(--stack-y)_+_var(--toast-swipe-y,0px))] scale-[calc(1-var(--toast-index)*0.05)] touch-none transition-[opacity,translate,scale,height] duration-400 select-none [--stack-direction:-1] [--stack-y:calc(var(--stack-direction)*var(--toast-index)*10px)] group-data-[side=bottom]/toast-stack:bottom-0 group-data-[side=top]/toast-stack:top-0 group-data-[side=top]/toast-stack:[--stack-direction:1] data-ending-style:pointer-events-none data-ending-style:opacity-0 data-expanded:scale-100 data-expanded:[--stack-y:calc(var(--stack-direction)*(var(--toast-offset)_+_var(--toast-index)*10px))] data-starting-style:opacity-0 data-starting-style:[--stack-y:calc(var(--stack-direction)*-100%)] data-swiping:transition-none motion-reduce:transition-opacity [&:not([data-front],[data-expanded])]:h-(--toast-front-height)"
+          class="matinee-toast group/toast glass ring-foreground/10 absolute inset-x-0 z-[calc(10-var(--toast-index))] h-(--toast-height) [translate:var(--toast-swipe-x,0px)_calc(var(--stack-y)_+_var(--toast-swipe-y,0px))] scale-[calc(1-var(--toast-index)*0.05)] touch-none rounded-lg shadow-xl ring-1 shadow-black/25 transition-[opacity,translate,scale,height] duration-400 select-none [--stack-direction:-1] [--stack-y:calc(var(--stack-direction)*var(--toast-index)*10px)] group-data-[side=bottom]/toast-stack:bottom-0 group-data-[side=top]/toast-stack:top-0 group-data-[side=top]/toast-stack:[--stack-direction:1] data-ending-style:pointer-events-none data-ending-style:opacity-0 data-expanded:scale-100 data-expanded:[--stack-y:calc(var(--stack-direction)*(var(--toast-offset)_+_var(--toast-index)*10px))] data-starting-style:opacity-0 data-starting-style:[--stack-y:calc(var(--stack-direction)*-100%)] data-swiping:transition-none motion-reduce:transition-opacity [&:not([data-front],[data-expanded])]:h-(--toast-front-height)"
         >
           <Show when={STATUS_ICONS.get(entry.type ?? "default")}>
             {(icon) => (
               <span data-icon="" class="matinee-toast-icon">
                 <Icon
                   icon={icon()}
-                  class={
-                    entry.type === "loading" ? "size-5 animate-spin" : "size-4"
-                  }
+                  class={[
+                    "size-4",
+                    { "animate-spin": entry.type === "loading" },
+                  ]}
                 />
               </span>
             )}
           </Show>
-          <div
-            data-content=""
-            class="flex min-w-0 flex-col group-[&:not([data-front],[data-expanded])]/toast:overflow-hidden"
-          >
+          <div data-content="">
             <ToastTitle class="matinee-toast-title" />
             <ToastDescription class="matinee-toast-description" />
           </div>
@@ -160,7 +158,7 @@ function ToastStack(props: {
           <ToastClose
             data-close-button=""
             aria-label={uiText().closeToast}
-            class="absolute top-0 flex cursor-pointer items-center justify-center rounded-full"
+            class="flex cursor-pointer items-center justify-center rounded-full"
           >
             <Icon icon={X} class="size-3" stroke-width={2.25} />
           </ToastClose>

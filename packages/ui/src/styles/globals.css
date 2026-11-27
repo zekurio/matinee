@@ -477,80 +477,65 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
 }
 
 /*
- * Toasts: the status icon on the title line, the description under it, and
- * the action at the right of the text, centered on the toast's height.
- * Closing is always the round button on the top-right corner. Adapted
- * from alloy.
+ * Toasts, after T3 Code's: the status icon and the title on one line, a
+ * description under both from the toast's edge, and the action centered
+ * on the text at the right. The title's line is as tall as the action, so
+ * on a toast of one line the two share a center. Closing is the round
+ * button on the top-right corner. The surface is a menu's (`toast.tsx`).
  *
- * Every toast keeps Sonner's full --width, never as wide as its text:
- * collapsed, Sonner stacks older toasts behind the newest one, and toasts
- * of different widths poke out around each other instead of stacking.
+ * Every toast keeps the stack's full width, never as wide as its text:
+ * collapsed, older toasts stack behind the newest one, and toasts of
+ * different widths would poke out around each other instead of stacking.
  */
 .matinee-toast {
-  display: grid !important;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas: "icon content";
-  align-items: start !important;
-  column-gap: 10px !important;
-  row-gap: 0 !important;
-  padding: 12px 14px !important;
-  background: var(--popover) !important;
-  color: var(--popover-foreground) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: var(--radius-xl) !important;
-  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.6) !important;
-}
-/* Glass, as the glass utility, over Sonner's own background. */
-@supports (backdrop-filter: blur(1px)) {
-  @media not (prefers-reduced-transparency: reduce) {
-    .matinee-toast {
-      background: var(--popover-glass) !important;
-      backdrop-filter: var(--glass-filter);
-    }
-  }
+  --toast-line: 24px;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "icon title action"
+    "description description action";
+  align-items: start;
+  column-gap: 8px;
+  /* The right side keeps clear of the close button over the corner. */
+  padding: 10px 24px 10px 14px;
+  color: var(--popover-foreground);
 }
 /* Plain toasts have no status icon, so no icon column. */
 .matinee-toast:not(:has(> [data-icon])) {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "content";
-}
-/* Only a real button opens the action column. */
-.matinee-toast:has(> [data-button]) {
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas: "icon content action";
-}
-.matinee-toast:not(:has(> [data-icon])):has(> [data-button]) {
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "content action";
+  grid-template-areas:
+    "title action"
+    "description action";
+}
+/* Without an action, only the title has to keep clear of the close button. */
+.matinee-toast:not(:has(> [data-button])) {
+  padding-right: 14px;
+}
+.matinee-toast:not(:has(> [data-button])) .matinee-toast-title {
+  padding-right: 10px;
+}
+/*
+ * Collapsed, the toasts behind the newest show only their edges. The glass
+ * would let their text and buttons through the one in front.
+ */
+.matinee-toast > *,
+.matinee-toast > [data-content] > * {
+  transition: opacity 200ms ease-out;
+}
+.matinee-toast:not([data-front], [data-expanded]) > *,
+.matinee-toast:not([data-front], [data-expanded]) > [data-content] > * {
+  opacity: 0;
 }
 .matinee-toast-icon {
   grid-area: icon;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: center !important;
-  width: 16px !important;
-  /* The title's line box, so the glyph sits on its line. */
-  height: 20px !important;
-  margin: 0 !important;
+  justify-content: center;
+  height: var(--toast-line);
   color: var(--muted-foreground);
 }
-.matinee-toast-icon svg {
-  width: 100%;
-  height: 100%;
-  margin: 0 !important;
-}
-/* The spinner draws a size up, so it reads as working at a glance. */
-.matinee-toast[data-type="loading"] .matinee-toast-icon {
-  width: 20px !important;
-}
-.matinee-toast[data-type="loading"] .matinee-toast-icon svg {
-  width: 20px;
-  height: 20px;
-}
-.matinee-toast > [data-content] {
-  grid-area: content;
-  min-width: 0;
-  gap: 2px !important;
+.matinee-toast[data-type="info"] .matinee-toast-icon {
+  color: var(--info);
 }
 .matinee-toast[data-type="success"] .matinee-toast-icon {
   color: var(--success);
@@ -561,11 +546,22 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
 .matinee-toast[data-type="error"] .matinee-toast-icon {
   color: var(--destructive);
 }
+.matinee-toast[data-type="loading"] .matinee-toast-icon {
+  opacity: 0.8;
+}
+/* The title and the description are the grid's own items. */
+.matinee-toast > [data-content] {
+  display: contents;
+}
 .matinee-toast-title {
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  line-height: 20px !important;
-  color: var(--foreground) !important;
+  grid-area: title;
+  /* Centers its 20px line on the action's 24px. */
+  padding-block: calc((var(--toast-line) - 20px) / 2);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--foreground);
+  overflow-wrap: break-word;
   /*
    * No lone last word. Not `balance`, which narrows the lines and leaves an
    * empty strip on the right of a full-width toast.
@@ -573,53 +569,63 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
   text-wrap: pretty;
 }
 .matinee-toast-description {
-  font-size: 13px !important;
-  line-height: 18px !important;
-  color: var(--muted-foreground) !important;
+  grid-area: description;
+  padding-bottom: 2px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted-foreground);
+  overflow-wrap: break-word;
 }
-.matinee-toast[data-styled="true"] > [data-close-button] {
-  left: auto !important;
-  right: 0 !important;
-  transform: translate(35%, -35%) !important;
-  width: 20px !important;
-  height: 20px !important;
-  border: 1px solid var(--input) !important;
-  background: var(--popover) !important;
-  color: var(--muted-foreground) !important;
-  transition:
-    background-color 120ms ease-out,
-    color 120ms ease-out;
-}
-.matinee-toast[data-styled="true"] > [data-close-button]:hover {
-  background: var(--secondary) !important;
-  color: var(--foreground) !important;
-}
-.matinee-toast[data-styled="true"] > [data-close-button]:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--ring);
-}
-.matinee-toast[data-styled="true"] > [data-button] {
+.matinee-toast > [data-button] {
   grid-area: action;
   /* Centered on the whole toast, however many lines the text runs to. */
   align-self: center;
-  height: 28px !important;
-  margin: 0 0 0 4px !important;
-  padding-inline: 12px !important;
-  border-radius: var(--radius-md) !important;
-  background: var(--primary) !important;
-  color: var(--primary-foreground) !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
+  height: var(--toast-line);
+  margin-left: -2px;
+  padding-inline: 8px;
+  border-radius: min(var(--radius-md), 10px);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background-color 120ms ease-out;
 }
-.matinee-toast[data-styled="true"] > [data-button]:hover {
-  background: color-mix(in oklab, var(--primary) 88%, transparent) !important;
+.matinee-toast > [data-button]:hover {
+  background: color-mix(in oklab, var(--primary) 88%, transparent);
 }
-.matinee-toast[data-styled="true"] > [data-button]:focus-visible {
+.matinee-toast > [data-button]:focus-visible {
   outline: none;
   box-shadow:
     0 0 0 2px var(--popover),
     0 0 0 4px var(--ring);
+}
+.matinee-toast > [data-close-button] {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+  background: color-mix(in oklab, var(--popover) 92%, transparent);
+  color: var(--muted-foreground);
+  box-shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.1),
+    0 1px 2px -1px rgb(0 0 0 / 0.1);
+  backdrop-filter: blur(8px);
+  transition:
+    background-color 120ms ease-out,
+    color 120ms ease-out;
+}
+.matinee-toast > [data-close-button]:hover {
+  background: var(--popover);
+  color: var(--foreground);
+}
+.matinee-toast > [data-close-button]:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--ring);
 }
 
 /*
