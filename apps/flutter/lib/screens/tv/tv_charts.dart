@@ -18,9 +18,6 @@ import '../profile/profile_data.dart';
 /// How tall the watch-time bars can grow.
 const _barsHeight = 180.0;
 
-/// Beside the bars, for the scale's figures.
-const _scaleWidth = 88.0;
-
 /// A move of [at] among [count] places for [event]: [back] and [forward]
 /// step it. The new place, or null at an end or for another key, so the
 /// press moves focus on as usual.
@@ -133,91 +130,118 @@ class _TvWatchTimeChartState extends State<TvWatchTimeChart> {
                 maxLines: 1,
                 style: TvType.display.style(color: colors.foreground),
               ),
-              if (buckets.isNotEmpty) ...[
+              if (buckets.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 20),
-                  child: SizedBox(
-                    height: _barsHeight,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: CustomPaint(
-                            painter: _BarsPainter(
-                              values: [for (final b in buckets) b.watchSeconds],
-                              top: top,
-                              picked: shown == null ? null : _picked,
-                              accent: colors.accent,
-                              mark: colors.foreground,
-                              line: colors.border,
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: _scaleWidth,
-                          child: Padding(
-                            padding: const EdgeInsetsDirectional.only(
-                              start: 14,
-                            ),
-                            child: Stack(
-                              children: [
-                                Positioned(
-                                  top: 4,
-                                  child: Text(
-                                    formatWatchTime(top, l),
-                                    maxLines: 1,
-                                    style: muted,
-                                  ),
-                                ),
-                                Positioned(
-                                  top: _barsHeight / 2 + 4,
-                                  child: Text(
-                                    formatWatchTime(top / 2, l),
-                                    maxLines: 1,
-                                    style: muted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(
-                    top: 8,
-                    end: _scaleWidth,
-                  ),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: Text(
-                          bucketName(
-                            buckets.first.start,
-                            stats.unit,
-                            l,
-                            locale,
-                          ),
-                          maxLines: 1,
-                          style: muted,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            SizedBox(
+                              height: _barsHeight,
+                              child: CustomPaint(
+                                painter: _BarsPainter(
+                                  values: [
+                                    for (final b in buckets) b.watchSeconds,
+                                  ],
+                                  top: top,
+                                  picked: shown == null ? null : _picked,
+                                  accent: colors.accent,
+                                  mark: colors.foreground,
+                                  line: colors.border,
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      bucketName(
+                                        buckets.first.start,
+                                        stats.unit,
+                                        l,
+                                        locale,
+                                      ),
+                                      maxLines: 1,
+                                      style: muted,
+                                    ),
+                                  ),
+                                  if (buckets.length > 1)
+                                    Text(
+                                      bucketName(
+                                        buckets.last.start,
+                                        stats.unit,
+                                        l,
+                                        locale,
+                                      ),
+                                      maxLines: 1,
+                                      style: muted,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      if (buckets.length > 1)
-                        Text(
-                          bucketName(buckets.last.start, stats.unit, l, locale),
-                          maxLines: 1,
-                          style: muted,
-                        ),
+                      _Scale(
+                        top: formatWatchTime(top, l),
+                        half: formatWatchTime(top / 2, l),
+                        style: muted,
+                      ),
                     ],
                   ),
                 ),
-              ],
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// The scale's figures beside the bars, each under its line. It is as
+/// wide as the longer one, which some languages spell long.
+class _Scale extends StatelessWidget {
+  const _Scale({required this.top, required this.half, required this.style});
+
+  final String top;
+  final String half;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 14),
+      child: SizedBox(
+        height: _barsHeight,
+        child: Stack(
+          children: [
+            // Unseen, the two figures give the column its width.
+            ExcludeSemantics(
+              child: Opacity(
+                opacity: 0,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(top, maxLines: 1, style: style),
+                    Text(half, maxLines: 1, style: style),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(top: 4, child: Text(top, maxLines: 1, style: style)),
+            Positioned(
+              top: _barsHeight / 2 + 4,
+              child: Text(half, maxLines: 1, style: style),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

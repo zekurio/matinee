@@ -888,7 +888,7 @@ export function EpisodePage(props: { itemId: string }) {
 }
 
 /**
- * The episode over its still, or its show's art: the show, season and
+ * The episode over its show's art, or its still: the show, season and
  * number, name, facts, overview, and file, with Play and its marks and
  * the ways to its season and show. Below, the rest of its season.
  */
@@ -896,10 +896,12 @@ function EpisodeView(props: { item: MediaItem }) {
   const { nav, viewer, actions, toasts } = useApp()
   const label = () => itemLabel(props.item)
   const title = () => props.item.title
+  // The show's art first, as the web's wide pages have it: a still is
+  // often too small to fill a TV without blurring.
   useBackdrop(() =>
     present(
-      art(props.item.episode?.still, "large"),
       art(title()?.images.backdrop, "large"),
+      art(props.item.episode?.still, "large"),
       frame(props.item.id, true),
     ),
   )
