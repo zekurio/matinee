@@ -157,6 +157,19 @@ function revealPinned(
   scrollAxis(scroller, "y", placeIn(scroller, leaf).top - pivot, instant)
 }
 
+/**
+ * The grid's cell that holds `leaf`. A focused card grows, and a box
+ * measured mid-growth or grown sits off its row, so the grid measures
+ * the cell, which keeps its place.
+ */
+function cellOf(leaf: HTMLElement): HTMLElement {
+  let cell = leaf
+  while (cell.parentElement && !cell.parentElement.hasAttribute("data-fg")) {
+    cell = cell.parentElement
+  }
+  return cell.parentElement ? cell : leaf
+}
+
 /** From one row of a grid to the next, by where its cells sit: null while it has one row. */
 function rowPitch(leaf: HTMLElement): number | null {
   const cells = leaf.closest("[data-fg]")?.children
@@ -183,7 +196,7 @@ function revealInGrid(
   instant: boolean,
 ) {
   const edge = lengthOf(scroller, "data-scroll-start")
-  const place = placeIn(scroller, leaf)
+  const place = placeIn(scroller, cellOf(leaf))
   const pitch = rowPitch(leaf) ?? place.height
   const offset = place.top - headed(scroller, "y")
   const bottom = scroller.clientHeight - edge

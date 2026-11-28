@@ -1059,8 +1059,8 @@ class _EpisodeAbout extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // The episode page.
 
-/// An episode's page on a TV, or a loose file's: over its still, or its show's
-/// art, the show, season and number, name, facts, overview, and file, with Play
+/// An episode's page on a TV, or a loose file's: over its show's art, or its
+/// still, the show, season and number, name, facts, overview, and file, with Play
 /// and its marks and the ways to its season and show. Below, the rest of its
 /// season.
 class TvEpisodeScreen extends ConsumerStatefulWidget {
@@ -1113,8 +1113,10 @@ class _TvEpisodeScreenState extends ConsumerState<TvEpisodeScreen>
     final season = item.seasonNumber;
     return TvBackdrop(
       sources: [
-        if (item.episode?.still case final still?) ArtSource(still),
+        // The show's art first, as the web's wide pages have it: a still is
+        // often too small to fill a TV without blurring.
         if (title?.images.backdrop case final art?) ArtSource(art),
+        if (item.episode?.still case final still?) ArtSource(still),
         FrameSource(item.id),
       ],
       child: TvHeaderList(

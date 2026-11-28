@@ -355,19 +355,22 @@ function WatchTimeChart(props: { stats: WatchStats }) {
               }
             </For>
           </div>
-          {/* The scale's figures, each under its line. */}
+          {/* The scale's figures, each under its line. The column takes
+              the longer one's width, which some languages spell long. */}
           <div class="chart-scale t-caption muted">
-            <span style={{ top: "4rem" }}>{formatWatchTime(top())}</span>
-            <span style={{ top: `${BARS_HEIGHT / 2 + 4}rem` }}>
+            <span style={{ "margin-top": "4rem" }}>
+              {formatWatchTime(top())}
+            </span>
+            <span style={{ "margin-top": `${BARS_HEIGHT / 2 + 4}rem` }}>
               {formatWatchTime(top() / 2)}
             </span>
           </div>
-        </div>
-        <div class="chart-ends t-caption muted">
-          <span>{bucketName(first()!.start, props.stats.unit)}</span>
-          {buckets().length > 1 && (
-            <span>{bucketName(last()!.start, props.stats.unit)}</span>
-          )}
+          <div class="chart-ends t-caption muted">
+            <span>{bucketName(first()!.start, props.stats.unit)}</span>
+            {buckets().length > 1 && (
+              <span>{bucketName(last()!.start, props.stats.unit)}</span>
+            )}
+          </div>
         </div>
       </Show>
     </Tap>

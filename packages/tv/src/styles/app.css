@@ -780,14 +780,15 @@ html.pointer-resting * {
 .chart.stats-card:focus {
   border-color: rgba(var(--fg-rgb), 0.6);
 }
+/* The bars and the dates under them, beside the scale, which is as wide as its longest figure. */
 .chart-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   margin-top: 16rem;
 }
 
 .chart-bars {
   position: relative;
-  flex: 1;
   border-top: 1rem solid var(--border);
   border-bottom: 1rem solid var(--border);
 }
@@ -823,20 +824,19 @@ html.pointer-resting * {
 }
 
 .chart-scale {
-  position: relative;
-  flex: none;
-  width: 76rem;
+  display: grid;
+  align-items: start;
 }
 .chart-scale > span {
-  position: absolute;
-  left: 12rem;
+  grid-area: 1 / 1;
+  padding-left: 12rem;
   white-space: nowrap;
 }
 
 .chart-ends {
   display: flex;
   justify-content: space-between;
-  margin: 8rem 76rem 0 0;
+  margin-top: 8rem;
 }
 
 .heat-row {
