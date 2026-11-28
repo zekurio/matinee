@@ -11,7 +11,7 @@ import { type ComponentProps, omit } from "solid-js"
 
 export { Popover, PopoverDescription, PopoverTrigger }
 
-/** A small frosted panel anchored to a trigger. */
+/** A small panel anchored to a trigger. */
 export function PopoverContent(
   props: Omit<ComponentProps<typeof PopoverPopup>, "class"> & {
     class?: string
@@ -28,7 +28,7 @@ export function PopoverContent(
       side={props.side ?? "bottom"}
       sideOffset={props.sideOffset ?? 4}
       class={cn(
-        "isolate z-50 flex w-72 origin-(--transform-origin) flex-col gap-2.5 rounded-xl glass p-2.5 text-sm text-popover-foreground shadow-xl shadow-black/40 ring-1 ring-foreground/10 outline-hidden transition-[opacity,scale,translate] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-starting-style:data-[side=bottom]:-translate-y-1 data-starting-style:data-[side=left]:translate-x-2 data-starting-style:data-[side=right]:-translate-x-2 data-starting-style:data-[side=top]:translate-y-2 data-ending-style:scale-95 data-ending-style:opacity-0 motion-reduce:transition-none",
+        "isolate z-50 flex w-72 origin-(--transform-origin) flex-col gap-2.5 rounded-xl bg-popover p-2.5 text-sm text-popover-foreground shadow-xl shadow-black/40 ring-1 ring-foreground/10 outline-hidden transition-[opacity,scale,translate] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-starting-style:data-[side=bottom]:-translate-y-1 data-starting-style:data-[side=left]:translate-x-2 data-starting-style:data-[side=right]:-translate-x-2 data-starting-style:data-[side=top]:translate-y-2 data-ending-style:scale-95 data-ending-style:opacity-0 motion-reduce:transition-none",
         props.positionerClassName,
         props.class,
       )}

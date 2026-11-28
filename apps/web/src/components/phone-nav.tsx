@@ -85,7 +85,7 @@ export const tabBarPadding =
   "max-sm:pb-[calc(env(safe-area-inset-bottom)+6.5rem)]"
 
 /**
- * A phone's tabs, the Flutter tab bar: one row across the bottom, frosted
+ * A phone's tabs, the Flutter tab bar: one row across the bottom, solid
  * over the page, with a hairline on top, its tabs no wider together than
  * 480. Home, Media, and Explore, as the Flutter app has them. The shell
  * mounts it.
@@ -104,7 +104,7 @@ export function TabBar() {
   return (
     <nav
       aria-label={tr("shell.tabs")}
-      class="bg-background/80 border-border fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-[20px] backdrop-saturate-150"
+      class="bg-background border-border fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)]"
     >
       <ul class="mx-auto flex max-w-[480px] px-2">
         <For each={destinations()} keyed={(destination) => destination.to}>
@@ -268,7 +268,7 @@ export function PhoneTopBar(props: {
 
 /** The page's color veiling the art behind a floating button. */
 const floatingButton =
-  "bg-background/60 grid size-11 shrink-0 place-items-center rounded-full backdrop-blur-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+  "bg-background/85 grid size-11 shrink-0 place-items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
 
 /**
  * Back and Home over a title's, season's, or episode's art on phones, in
@@ -304,7 +304,7 @@ export function ItemTopBar(props: {
             <Icon icon={House} class="size-5" />
           </Link>
           <Show when={props.parent}>
-            <span class="bg-background/60 flex h-11 min-w-0 items-center rounded-full text-sm font-medium backdrop-blur-md empty:hidden">
+            <span class="bg-background/85 flex h-11 min-w-0 items-center rounded-full text-sm font-medium empty:hidden">
               {props.parent}
             </span>
           </Show>

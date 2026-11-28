@@ -90,7 +90,7 @@ function SkipButton(props: { segment: MediaSegment; onSkip: () => void }) {
       <Button
         size="lg"
         variant="secondary"
-        class="bg-black/70 text-white shadow-lg ring-1 ring-white/15 backdrop-blur-md hover:bg-black/85"
+        class="bg-black/80 text-white shadow-lg ring-1 ring-white/15 hover:bg-black/90"
         onClick={() => props.onSkip()}
       >
         {skipLabel(props.segment.kind)}

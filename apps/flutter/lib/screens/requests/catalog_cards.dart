@@ -19,7 +19,7 @@ import 'request_words.dart';
 import 'requests_hub.dart';
 
 /// The catalog's cards and the marks and buttons a title the server lacks
-/// carries: the state as a glass mark in a poster's corner, the one thing the
+/// carries: the state as a translucent mark in a poster's corner, the one thing the
 /// viewer may do as a button, and the card that turns into the library's when
 /// the title arrives.
 
@@ -57,7 +57,7 @@ class StateGlyph extends StatelessWidget {
   }
 }
 
-/// The round glass mark in a catalog card's corner, where a library
+/// The round translucent mark in a catalog card's corner, where a library
 /// title's watched check sits, once the title has a state; nothing before,
 /// so a card carries no permanent plus. [leaving] fills the ring and lets
 /// it go, for an arrival, then calls [onGone].
@@ -153,7 +153,7 @@ class _CatalogBadgeState extends State<CatalogBadge>
   }
 }
 
-/// The state as a glass pill in a poster's corner: the mark's glyph with
+/// The state as a translucent pill in a poster's corner: the mark's glyph with
 /// its word, and the share that's in while it's on its way. Nothing for a
 /// title nobody requested. With [tip], for an admin who requested it, a
 /// tap says it at the bottom of the screen, as the web's tooltip does, and
@@ -573,8 +573,8 @@ class _AskedCardState extends ConsumerState<AskedCard> {
 /// request sheet. A Request the viewer can't make, out of requests, with
 /// requests off, or declined, stays dimmed, and a tap says why at the
 /// bottom of the screen ([dimmedText]). [plain] draws it off a picture, as
-/// an ordinary button rather than glass; [page] draws it leading a catalog
-/// page's row, as large as Play is in a library title's. [action] and
+/// an ordinary button rather than the scrim one; [page] draws it leading a
+/// catalog page's row, as large as Play is in a library title's. [action] and
 /// [label] stand in for the server's, for "Request more".
 class RequestButton extends ConsumerWidget {
   const RequestButton({
@@ -623,7 +623,7 @@ class RequestButton extends ConsumerWidget {
           ? ButtonLook.primary
           : plain || page
           ? ButtonLook.secondary
-          : ButtonLook.glass,
+          : ButtonLook.scrim,
       leading: act == PosterAction.request ? Lucide.plus : Lucide.x,
       dimmed: busy || blocked,
       label: why == null ? words : '$words. $why',

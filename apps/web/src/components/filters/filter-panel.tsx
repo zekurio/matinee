@@ -118,7 +118,7 @@ export function FilterPanel(
             />
             <FilterButtonFace compact active={props.active} />
           </DrawerTrigger>
-          <DrawerContent class="glass-readable">
+          <DrawerContent>
             <DrawerHandle />
             <DrawerTitle class="px-5 pt-3 pb-1 text-lg leading-7 font-semibold tracking-tight">
               {tr("filters.title")}
@@ -169,7 +169,7 @@ export function FilterPanel(
           // Kept out of `main`, so the closed copy's chips aren't found
           // among the page's own when something looks for them there.
           container={document.body}
-          class="glass-readable max-h-[min(44rem,var(--available-height))] w-104 max-w-(--available-width) gap-0 p-0"
+          class="max-h-[min(44rem,var(--available-height))] w-104 max-w-(--available-width) gap-0 p-0"
         >
           <PopoverHeader class="min-h-14 px-4">
             <PopoverTitle class="font-semibold">

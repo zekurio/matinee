@@ -120,8 +120,6 @@ fix is:
   back into a windowed grid. Keep what it worked out, as `blurhash.tsx`
   keeps decoded placeholders.
 - Animate `scale`, `translate` and `opacity`, never `width` or `height`.
-  A `backdrop-blur` on something a list repeats goes on only while it
-  shows.
 - A `<canvas>` gets a layer of its own in Chrome, and so does what's
   drawn over it. A placeholder a list repeats is an `<img>`.
 - A lazy `<img sizes="auto">` picks a file again when it leaves the page,

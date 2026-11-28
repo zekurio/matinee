@@ -152,9 +152,9 @@ function badgeGlyph(
 }
 
 /**
- * The round glass mark in a catalog card's corner, where an owned title's
- * watched check sits, once a title has a state, and none before. Glass
- * means not here; the accent check means watched, and the two never meet.
+ * The round translucent mark in a catalog card's corner, where an owned title's
+ * watched check sits, once a title has a state, and none before. The
+ * plain mark means not here; the accent check means watched, and the two never meet.
  * `leaving` fills the ring and fades it out, for an arrival.
  */
 export function CatalogBadge(props: {
@@ -172,7 +172,7 @@ export function CatalogBadge(props: {
           role="img"
           aria-label={shown().label}
           class={cn(
-            "border-foreground/10 bg-background/70 grid size-6 place-items-center rounded-full border shadow-sm backdrop-blur-md [&_svg:not([class*='size-'])]:size-3.5",
+            "border-foreground/10 bg-background/90 grid size-6 place-items-center rounded-full border shadow-sm [&_svg:not([class*='size-'])]:size-3.5",
             props.leaving &&
               "animate-out fade-out-0 zoom-out-50 fill-mode-forwards duration-200 ease-out motion-reduce:animate-none motion-reduce:opacity-0",
             props.class,
@@ -192,7 +192,7 @@ export function CatalogBadge(props: {
 export type BadgeTip = { text: string; detail?: string | null }
 
 /**
- * The state as a glass pill in a corner of a larger poster, a title page's
+ * The state as a translucent pill in a corner of a larger poster, a title page's
  * or a season's: the card badge's glyph with its word beside it, and the
  * share that's in while it's on its way. A title nobody requested shows
  * none. With `tip`, it says more on hover and keyboard focus, and the
@@ -223,7 +223,7 @@ export function PosterBadge(props: {
           aria-label={props.tip ? glyph()?.label : undefined}
           aria-describedby={props.tip ? tipId : undefined}
           class={cn(
-            "border-foreground/10 bg-background/70 animate-in fade-in-0 inline-flex max-w-full items-center rounded-full border font-medium shadow-sm backdrop-blur-md duration-200 motion-reduce:animate-none",
+            "border-foreground/10 bg-background/90 animate-in fade-in-0 inline-flex max-w-full items-center rounded-full border font-medium shadow-sm duration-200 motion-reduce:animate-none",
             lg()
               ? "text-13px h-8 gap-2 px-3 [&_svg:not([class*='size-'])]:size-4"
               : "h-7 gap-1.5 px-2.5 text-xs [&_svg:not([class*='size-'])]:size-3.5",

@@ -91,7 +91,7 @@ export function SelectContent(
       alignItemWithTrigger={props.alignItemWithTrigger ?? false}
       data-align-trigger={props.alignItemWithTrigger ? "true" : undefined}
       class={cn(
-        "isolate z-50 max-h-(--available-height) w-auto max-w-(--available-width) min-w-(--anchor-width) origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-xl border-0 glass p-0 text-popover-foreground shadow-xl shadow-black/40 ring-1 ring-foreground/10 outline-none transition-[opacity,scale,translate] duration-100 data-[align-trigger=true]:transition-none data-starting-style:scale-95 data-starting-style:opacity-0 data-starting-style:data-[side=bottom]:-translate-y-1 data-starting-style:data-[side=left]:translate-x-2 data-starting-style:data-[side=right]:-translate-x-2 data-starting-style:data-[side=top]:translate-y-2 data-ending-style:scale-95 data-ending-style:opacity-0 motion-reduce:transition-none",
+        "isolate z-50 max-h-(--available-height) w-auto max-w-(--available-width) min-w-(--anchor-width) origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-xl border-0 bg-popover p-0 text-popover-foreground shadow-xl shadow-black/40 ring-1 ring-foreground/10 outline-none transition-[opacity,scale,translate] duration-100 data-[align-trigger=true]:transition-none data-starting-style:scale-95 data-starting-style:opacity-0 data-starting-style:data-[side=bottom]:-translate-y-1 data-starting-style:data-[side=left]:translate-x-2 data-starting-style:data-[side=right]:-translate-x-2 data-starting-style:data-[side=top]:translate-y-2 data-ending-style:scale-95 data-ending-style:opacity-0 motion-reduce:transition-none",
         props.class,
       )}
     >
@@ -172,7 +172,7 @@ function ScrollButton(props: ScrollButtonProps & { direction: "up" | "down" }) {
         })
       }}
       class={cn(
-        "sticky z-10 flex w-full cursor-default items-center justify-center glass py-1 [&_svg]:size-4",
+        "sticky z-10 flex w-full cursor-default items-center justify-center bg-popover py-1 [&_svg]:size-4",
         props.direction === "up" ? "top-0" : "bottom-0",
         props.class,
       )}

@@ -483,7 +483,7 @@ export function PlayerStats(props: {
   return (
     <section
       aria-label={tr("player.stats.toggle")}
-      class="glass text-popover-foreground ring-foreground/10 absolute top-3 right-3 z-10 max-h-[calc(100%-1.5rem)] w-[min(24rem,calc(100%-1.5rem))] overflow-y-auto rounded-xl p-3 pr-9 text-xs shadow-xl ring-1 shadow-black/40 sm:top-4 sm:right-5"
+      class="bg-popover text-popover-foreground ring-foreground/10 absolute top-3 right-3 z-10 max-h-[calc(100%-1.5rem)] w-[min(24rem,calc(100%-1.5rem))] overflow-y-auto rounded-xl p-3 pr-9 text-xs shadow-xl ring-1 shadow-black/40 sm:top-4 sm:right-5"
     >
       <button
         type="button"

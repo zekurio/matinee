@@ -1,8 +1,4 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/widgets.dart';
-
-final _blur = ui.ImageFilter.blur(sigmaX: 4, sigmaY: 4);
 
 class ModalBackdrop extends StatelessWidget {
   const ModalBackdrop({
@@ -23,12 +19,7 @@ class ModalBackdrop extends StatelessWidget {
       IgnorePointer(
         child: FadeTransition(
           opacity: animation,
-          child: ClipRect(
-            child: BackdropFilter(
-              filter: _blur,
-              child: ColoredBox(color: color),
-            ),
-          ),
+          child: ColoredBox(color: color),
         ),
       ),
       child,

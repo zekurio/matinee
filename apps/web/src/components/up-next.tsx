@@ -81,7 +81,7 @@ function Countdown(props: { upNext: UpNext }) {
     <Show when={!hidden() || ended()}>
       <section
         aria-label={tr("player.upNext")}
-        class="w-[min(22rem,calc(100vw-1.5rem))] rounded-xl bg-black/80 p-4 text-white shadow-lg ring-1 ring-white/10 backdrop-blur-md"
+        class="w-[min(22rem,calc(100vw-1.5rem))] rounded-xl bg-black/85 p-4 text-white shadow-lg ring-1 ring-white/10"
       >
         <p class="text-sm text-white/70">{tr("player.upNext")}</p>
         <p class="mt-1 line-clamp-2 font-semibold">{props.upNext.name}</p>

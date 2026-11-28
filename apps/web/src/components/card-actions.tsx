@@ -59,7 +59,7 @@ export function CardScrim() {
   return (
     <span
       aria-hidden="true"
-      class="pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-t from-black/50 to-black/10 opacity-0 transition-opacity group-hover/card:opacity-100 group-hover/card:backdrop-blur-xs group-has-[:focus-visible]/card:opacity-100 group-has-[:focus-visible]/card:backdrop-blur-xs group-has-[[aria-expanded=true]]/card:opacity-100 group-has-[[aria-expanded=true]]/card:backdrop-blur-xs motion-reduce:transition-none [@media(pointer:coarse)]:hidden"
+      class="pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-t from-black/50 to-black/10 opacity-0 transition-opacity group-hover/card:opacity-100 group-has-[:focus-visible]/card:opacity-100 group-has-[[aria-expanded=true]]/card:opacity-100 motion-reduce:transition-none [@media(pointer:coarse)]:hidden"
     />
   )
 }

@@ -752,7 +752,7 @@ class _Buttons extends StatelessWidget {
         ),
         MatineeButton(
           size: ButtonSize.lg,
-          look: ButtonLook.frosted,
+          look: ButtonLook.tinted,
           leading: Lucide.info,
           onPressed: () => context.push(Routes.title(slide.title.id)),
           child: Text(l.mediaHeroDetails),

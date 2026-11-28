@@ -7,7 +7,7 @@
  * Backdrops tint the page with the theme background and blur it, so what
  * sits underneath stays visible as context instead of dropping to black.
  */
-export const MODAL_OVERLAY_CLASS_NAME = "bg-background/60 backdrop-blur-xs"
+export const MODAL_OVERLAY_CLASS_NAME = "bg-background/70"
 
 /**
  * Base UI drops the backdrop of a modal opened inside another one. We want
