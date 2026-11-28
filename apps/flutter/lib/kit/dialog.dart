@@ -37,7 +37,7 @@ class Dialog extends StatelessWidget {
     return navigator.push<T>(
       _DialogRoute<T>(
         builder: (context) => themes.wrap(Builder(builder: builder)),
-        backdrop: colors.background.withValues(alpha: .6),
+        backdrop: colors.background.withValues(alpha: .7),
         dismissLabel: dismissLabel,
         reducedMotion: reducedMotion,
       ),

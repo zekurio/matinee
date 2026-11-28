@@ -36,7 +36,7 @@ export function DropdownMenu(props: ComponentProps<typeof Menu>) {
 }
 
 const MENU_SURFACE =
-  "z-50 max-h-(--available-height) origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-xl border-0 glass p-1 text-popover-foreground shadow-xl shadow-black/40 ring-1 ring-foreground/10 outline-none transition-[opacity,scale,translate] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-starting-style:data-[side=bottom]:-translate-y-1 data-starting-style:data-[side=left]:translate-x-2 data-starting-style:data-[side=right]:-translate-x-2 data-starting-style:data-[side=top]:translate-y-2 data-ending-style:scale-95 data-ending-style:opacity-0 motion-reduce:transition-none"
+  "z-50 max-h-(--available-height) origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-xl border-0 bg-popover p-1 text-popover-foreground shadow-xl shadow-black/40 ring-1 ring-foreground/10 outline-none transition-[opacity,scale,translate] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-starting-style:data-[side=bottom]:-translate-y-1 data-starting-style:data-[side=left]:translate-x-2 data-starting-style:data-[side=right]:-translate-x-2 data-starting-style:data-[side=top]:translate-y-2 data-ending-style:scale-95 data-ending-style:opacity-0 motion-reduce:transition-none"
 
 type PopupProps = Omit<ComponentProps<typeof MenuContent>, "class"> & {
   class?: string

@@ -236,7 +236,7 @@ export function PlayGlyph() {
         // Blurred only while it shows. A backdrop filter costs a layer
         // even at no opacity, and a library has one of these per card:
         // 1,200 of them took six times as long to paint.
-        class="absolute inset-0 rounded-full bg-black/30 opacity-0 transition-opacity group-hover/play:opacity-100 group-hover/play:backdrop-blur-md group-focus-visible/play:opacity-100 group-focus-visible/play:backdrop-blur-md motion-reduce:transition-none"
+        class="absolute inset-0 rounded-full bg-black/30 opacity-0 transition-opacity group-hover/play:opacity-100 group-focus-visible/play:opacity-100 motion-reduce:transition-none"
       />
       <Icon
         icon={Play}

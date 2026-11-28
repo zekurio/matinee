@@ -217,7 +217,7 @@ enum Glyph { clock, ring, calendar, slash }
 /// in, or null for a dotted ring.
 typedef CardBadge = ({Glyph glyph, double? progress});
 
-/// The round glass mark in a catalog card's corner, once the title has a
+/// The round translucent mark in a catalog card's corner, once the title has a
 /// state. Null for a title nobody requested, and for one that's here: a
 /// card shows nothing at rest, as the web's does.
 CardBadge? badgeOf(Availability availability) => switch (availability.state) {

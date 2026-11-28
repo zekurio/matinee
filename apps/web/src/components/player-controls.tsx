@@ -420,13 +420,13 @@ function SeekPreview(props: {
     <Show
       when={props.trickplay}
       fallback={
-        <span class="block rounded-md bg-black/45 px-2 py-1 text-xs font-medium text-white shadow-lg ring-1 ring-white/15 backdrop-blur-md">
+        <span class="block rounded-md bg-black/75 px-2 py-1 text-xs font-medium text-white shadow-lg ring-1 ring-white/15">
           {formatTime(props.time())}
         </span>
       }
     >
       {(tiles) => (
-        <span class="flex flex-col items-center gap-1 rounded-lg bg-black/45 p-1 pb-1.5 text-xs font-medium text-white shadow-lg ring-1 ring-white/15 backdrop-blur-md">
+        <span class="flex flex-col items-center gap-1 rounded-lg bg-black/75 p-1 pb-1.5 text-xs font-medium text-white shadow-lg ring-1 ring-white/15">
           <TrickplayThumb
             tiles={tiles()}
             time={props.time()}
@@ -804,7 +804,7 @@ export function FlashNote() {
       {(note) => (
         <div
           aria-hidden="true"
-          class="animate-in fade-in-0 zoom-in-95 pointer-events-none absolute top-1/4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm font-medium backdrop-blur-md duration-150 [&_svg]:size-4"
+          class="animate-in fade-in-0 zoom-in-95 pointer-events-none absolute top-1/4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/75 px-4 py-2 text-sm font-medium duration-150 [&_svg]:size-4"
         >
           <Show when={note.icon}>{(icon) => <Icon icon={icon()} />}</Show>
           {note.text}

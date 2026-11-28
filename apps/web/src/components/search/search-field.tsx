@@ -333,11 +333,6 @@ export function SearchField() {
           sideOffset={8}
           collisionPadding={8}
           class="p-0"
-          // A results table needs a calmer surface than a one-line menu.
-          style={{
-            "background-color": "var(--popover)",
-            "backdrop-filter": "none",
-          }}
         >
           <div
             class="relative flex flex-col"

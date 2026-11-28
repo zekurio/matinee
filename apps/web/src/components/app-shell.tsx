@@ -218,7 +218,7 @@ function TopBar(props: { user: User }) {
         aria-label={tr("shell.homeLink")}
         class={cn(
           RAIL,
-          "group/logo bg-background supports-backdrop-filter:bg-background/85 [@media(prefers-reduced-transparency:reduce)]:bg-background border-border grid h-full shrink-0 place-items-center border-r outline-none supports-backdrop-filter:backdrop-blur-xl",
+          "group/logo bg-background border-border grid h-full shrink-0 place-items-center border-r outline-none",
         )}
       >
         <span class="group-focus-visible/logo:ring-ring grid size-11 place-items-center rounded-full transition-transform duration-200 group-focus-visible/logo:ring-2 group-active/logo:scale-[0.92] motion-reduce:transition-none">
@@ -228,7 +228,7 @@ function TopBar(props: { user: User }) {
           <LogoMark class="size-9.5" />
         </span>
       </Link>
-      <div class="bg-background supports-backdrop-filter:bg-background/85 [@media(prefers-reduced-transparency:reduce)]:bg-background grid min-w-0 flex-1 grid-cols-[1fr_minmax(0,30rem)_1fr] items-center gap-3 px-3 supports-backdrop-filter:backdrop-blur-xl">
+      <div class="bg-background grid min-w-0 flex-1 grid-cols-[1fr_minmax(0,30rem)_1fr] items-center gap-3 px-3">
         <div class="flex items-center gap-1">
           <BarButton
             label={tr("shell.back")}

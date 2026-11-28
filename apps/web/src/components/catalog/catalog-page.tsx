@@ -452,7 +452,7 @@ function TrailerButton(props: { trailers: Trailer[] }) {
             variant: "secondary",
             size: "lg",
             className:
-              "border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur max-sm:size-11 max-sm:rounded-full max-sm:px-0",
+              "border-foreground/10 bg-foreground/15 hover:bg-foreground/25 max-sm:size-11 max-sm:rounded-full max-sm:px-0",
           })}
         >
           <Icon icon={Clapperboard} class="max-sm:size-5" />

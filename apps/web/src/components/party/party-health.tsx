@@ -176,7 +176,7 @@ export function PartyHealthButton(props: {
     >
       <PopoverTrigger
         title={tr("party.health.title")}
-        class="flex max-w-60 min-w-0 shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-sm font-medium backdrop-blur-md outline-none hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-white/70 [&_svg]:size-4 [&_svg]:shrink-0"
+        class="flex max-w-60 min-w-0 shrink-0 items-center gap-1.5 rounded-full bg-black/50 px-3 py-1 text-sm font-medium outline-none hover:bg-black/65 focus-visible:ring-2 focus-visible:ring-white/70 [&_svg]:size-4 [&_svg]:shrink-0"
       >
         <Icon icon={waits() ? Hourglass : UsersRound} />
         <span class="truncate">{label()}</span>

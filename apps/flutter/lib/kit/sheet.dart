@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart' as material;
 import 'package:flutter/widgets.dart';
 
-import 'glass.dart';
+import 'floating_surface.dart';
 import 'icon.dart';
 import 'keyboard_room.dart';
 import 'modal_backdrop.dart';
@@ -46,7 +46,7 @@ class Sheet extends StatelessWidget {
         barrierLabel: dismissLabel,
         isDismissible: true,
         enableDrag: true,
-        backdrop: colors.background.withValues(alpha: .6),
+        backdrop: colors.background.withValues(alpha: .7),
         reducedMotion: MediaQuery.disableAnimationsOf(context),
         maxWidth: widest,
       ),
@@ -59,7 +59,7 @@ class Sheet extends StatelessWidget {
     // The keyboard takes the bottom of the screen: the sheet rises over it,
     // so the field the person typed in and the list under it stay in view.
     return KeyboardRoom(
-      child: Glass(
+      child: FloatingSurface(
         shape: const BorderRadius.vertical(top: Radius.circular(KitRadius.xl)),
         border: Border(top: BorderSide(color: colors.hairline)),
         child: SafeArea(

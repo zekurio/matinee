@@ -13,7 +13,7 @@ import { client, errorMessage } from "@/lib/rpc"
 import { invalidateViewerState } from "@/lib/viewer-state"
 
 export const titleActionButton =
-  "border-foreground/10 bg-foreground/10 hover:bg-foreground/20 aria-expanded:bg-foreground/20 text-foreground backdrop-blur max-sm:size-11"
+  "border-foreground/10 bg-foreground/10 hover:bg-foreground/20 aria-expanded:bg-foreground/20 text-foreground max-sm:size-11"
 
 function favoriteFailed(error: Error) {
   toast.error(tr("media.favoriteFailed"), {

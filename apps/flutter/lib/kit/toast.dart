@@ -3,7 +3,7 @@ import 'dart:collection';
 
 import 'package:flutter/widgets.dart';
 
-import 'glass.dart';
+import 'floating_surface.dart';
 import 'icon.dart';
 import 'motion.dart';
 import 'press_indication.dart';
@@ -57,7 +57,7 @@ class Toast extends StatelessWidget {
       container: true,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 380),
-        child: Glass(
+        child: FloatingSurface(
           shape: KitRadius.panel,
           border: Border.all(color: colors.border),
           shadow: const [

@@ -1,9 +1,7 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 
-import 'glass.dart';
+import 'floating_surface.dart';
 import 'icon.dart';
 import 'motion.dart';
 import 'press_indication.dart';
@@ -34,8 +32,6 @@ class TabBarState extends ValueNotifier<Object?> {
 
   void select(Object id) => value = id;
 }
-
-final _blur = ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20);
 
 /// The tabs along the bottom of a phone's screen.
 ///
@@ -87,11 +83,9 @@ class _TabBarState extends State<TabBar> {
     final colors = MatineeTheme.of(context);
     return Semantics(
       container: true,
-      child: Glass(
+      child: FloatingSurface(
         border: Border(top: BorderSide(color: colors.border)),
-        tint: colors.background.withValues(alpha: .8),
-        solid: colors.background,
-        filter: _blur,
+        color: colors.background,
         child: SafeArea(
           top: false,
           child: Center(

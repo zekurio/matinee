@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
-import 'glass.dart';
 import 'icon.dart';
 import 'press_indication.dart';
 import 'theme.dart';
@@ -19,8 +18,13 @@ enum ButtonLook {
   ghost,
   destructive,
   link,
-  frosted,
-  glass,
+
+  /// The text color, faint, over a picture or the player, as the web's
+  /// `bg-foreground/15` buttons on a title's backdrop.
+  tinted,
+
+  /// White over a dark scrim, for a poster's hover gradient.
+  scrim,
 
   /// White on dark art, as the large streaming apps' Play: the one strong
   /// button over a picture.
@@ -155,12 +159,12 @@ class MatineeButton extends StatelessWidget {
             null,
           ),
           ButtonLook.link => (const Color(0x00000000), colors.accent, null),
-          ButtonLook.frosted => (
+          ButtonLook.tinted => (
             colors.foreground.withValues(alpha: hot ? .24 : .15),
             colors.foreground,
             colors.hairline,
           ),
-          ButtonLook.glass => (
+          ButtonLook.scrim => (
             white.withValues(alpha: hot ? .26 : .18),
             white,
             white.withValues(alpha: .15),
@@ -226,32 +230,26 @@ class MatineeButton extends StatelessWidget {
           ),
         );
         final outline = border == null ? null : Border.all(color: border);
-        final inset = Padding(padding: const EdgeInsets.all(1), child: content);
         // The web's button has a 1px border, transparent on most looks, and
         // its `bg-clip-padding` stops the fill inside it, so a filled
         // button shows 2px less than its height.
-        final surface = look == ButtonLook.frosted
-            ? Glass(shape: radius, tint: fill, border: outline, child: inset)
-            : PressFill(
-                decoration: BoxDecoration(
-                  border: outline,
-                  borderRadius: radius,
+        final surface = PressFill(
+          decoration: BoxDecoration(border: outline, borderRadius: radius),
+          child: Padding(
+            padding: const EdgeInsets.all(1),
+            child: PressFill(
+              decoration: BoxDecoration(
+                color: look == ButtonLook.scrim
+                    ? Color.alphaBlend(fill, const Color(0x66000000))
+                    : fill,
+                borderRadius: _inside(
+                  radius.resolve(Directionality.of(context)),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(1),
-                  child: PressFill(
-                    decoration: BoxDecoration(
-                      color: look == ButtonLook.glass
-                          ? Color.alphaBlend(fill, const Color(0x66000000))
-                          : fill,
-                      borderRadius: _inside(
-                        radius.resolve(Directionality.of(context)),
-                      ),
-                    ),
-                    child: content,
-                  ),
-                ),
-              );
+              ),
+              child: content,
+            ),
+          ),
+        );
         return Opacity(opacity: isDimmed ? .5 : 1, child: surface);
       },
     );

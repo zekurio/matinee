@@ -116,7 +116,7 @@ function ComboboxContent(
       align={props.align ?? "start"}
       alignOffset={props.alignOffset ?? 0}
       class={cn(
-        "group/combobox-content isolate z-50 flex max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) flex-col overflow-hidden rounded-xl border-0 glass p-0 text-popover-foreground shadow-xl shadow-black/40 ring-1 ring-foreground/10 outline-none [--list-height:var(--available-height)] transition-[opacity,scale,translate] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-starting-style:data-[side=bottom]:-translate-y-1 data-starting-style:data-[side=top]:translate-y-2 data-ending-style:scale-95 data-ending-style:opacity-0 motion-reduce:transition-none",
+        "group/combobox-content isolate z-50 flex max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) flex-col overflow-hidden rounded-xl border-0 bg-popover p-0 text-popover-foreground shadow-xl shadow-black/40 ring-1 ring-foreground/10 outline-none [--list-height:var(--available-height)] transition-[opacity,scale,translate] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-starting-style:data-[side=bottom]:-translate-y-1 data-starting-style:data-[side=top]:translate-y-2 data-ending-style:scale-95 data-ending-style:opacity-0 motion-reduce:transition-none",
         props.class,
       )}
     />

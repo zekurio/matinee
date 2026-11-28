@@ -23,21 +23,20 @@ import {
 /*
  * A title's state and the one thing its viewer may do about it. On a
  * card, on the poster itself, as Seerr's cards carry them: the state as a
- * glass badge in the corner, the action as a button along the lower edge
- * over a soft gradient while the card is hovered or focused. On a title's
- * page the badge stays on the poster and the button leads the row of
- * buttons, where a library title has Play.
+ * translucent badge in the corner, the action as a button along the lower
+ * edge over a soft gradient while the card is hovered or focused. On a
+ * title's page the badge stays on the poster and the button leads the row
+ * of buttons, where a library title has Play.
  */
 
 const authed = getRouteApi("/_authed")
 
 // Over the gradient, which is dark in either scheme, so its text is white.
-const glass =
-  "border-white/15 bg-white/15 text-white backdrop-blur-md hover:bg-white/25"
+const overPoster = "border-white/15 bg-black/50 text-white hover:bg-black/65"
 
 // In a title's row over its backdrop, as Trailer is drawn beside it.
-const pageGlass =
-  "border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur"
+const overBackdrop =
+  "border-foreground/10 bg-foreground/15 hover:bg-foreground/25"
 
 /**
  * Where the button is drawn: on a poster, over its gradient; `plain`, off
@@ -143,8 +142,8 @@ export function PosterActionButton(props: PosterActionProps) {
       // takes the pointer, for its tooltip.
       "aria-disabled:hover:bg-primary aria-disabled:pointer-events-auto aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:shadow-none",
       look() === "poster" && "shadow-lg shadow-black/30",
-      current() !== "request" && look() === "poster" && glass,
-      current() !== "request" && page() && pageGlass,
+      current() !== "request" && look() === "poster" && overPoster,
+      current() !== "request" && page() && overBackdrop,
       props.class,
     )
   const content = () => (

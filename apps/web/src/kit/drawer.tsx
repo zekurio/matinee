@@ -65,7 +65,7 @@ export function DrawerContent(
       <DrawerPopup
         {...omit(props, "class")}
         class={cn(
-          "flex w-full max-h-[85dvh] flex-col overflow-hidden rounded-t-xl glass text-popover-foreground ring-1 ring-foreground/10 outline-none transform-none!",
+          "flex w-full max-h-[85dvh] flex-col overflow-hidden rounded-t-xl bg-popover text-popover-foreground ring-1 ring-foreground/10 outline-none transform-none!",
           props.class,
         )}
       />

@@ -21,7 +21,7 @@ class SkipSegmentButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MatineeButton(
     onPressed: onPressed,
-    look: ButtonLook.frosted,
+    look: ButtonLook.tinted,
     size: ButtonSize.xl,
     label: label,
     child: Row(
@@ -121,7 +121,7 @@ class UpNextCard extends StatelessWidget {
                   ))
                     MatineeButton(
                       onPressed: dismiss,
-                      look: ButtonLook.frosted,
+                      look: ButtonLook.tinted,
                       size: ButtonSize.lg,
                       child: Text(words),
                     ),

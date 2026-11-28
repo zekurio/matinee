@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart' as material;
 import 'package:flutter/widgets.dart';
 
-import 'glass.dart';
+import 'floating_surface.dart';
 import 'icon.dart';
 import 'theme.dart';
 import 'tokens.dart';
@@ -146,7 +146,7 @@ class MenuPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = MatineeTheme.of(context);
-    return Glass(
+    return FloatingSurface(
       shape: KitRadius.panel,
       border: Border.all(color: colors.hairline),
       shadow: const [
